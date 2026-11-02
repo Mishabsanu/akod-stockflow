@@ -34,7 +34,7 @@ export function TopHeader({ modules, onOpenMenu }: { modules: NavModule[]; onOpe
           </Link>
           <span className="hidden sm:block text-xs font-bold uppercase tracking-wider truncate max-w-[280px]">
             <span className="lg:hidden">{activeModule?.label}</span>
-            <span className="hidden lg:inline">AKOD Distribution</span>
+            <span className="hidden lg:inline">AKOD Commerce</span>
           </span>
         </div>
 

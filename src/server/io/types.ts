@@ -35,6 +35,8 @@ export interface ImportContext {
   dryRun: boolean;
   /** Shared by all rows of one upload (e.g. running stock when one SKU appears twice in a dry run) */
   scratch: Map<string, unknown>;
+  /** Query string of the upload request, e.g. ?channel=<id> for channel imports */
+  params: URLSearchParams;
 }
 
 export interface IoEntity<T> {

@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { StockTransactionsPage } from "@/components/inventory/InventoryPages";
 
 export const metadata = { title: "Stock Transactions" };
 
-export default function Page() {
-  return <ComingSoon title="Stock Transactions" description="Every stock movement with before and after quantities" />;
+export default function Page({ searchParams }: PageProps<"/dashboard/inventory/transactions">) {
+  return <StockTransactionsPage searchParams={searchParams} />;
 }

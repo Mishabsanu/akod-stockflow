@@ -46,7 +46,7 @@ export function MobileDrawer({ modules, open, onClose }: { modules: NavModule[];
         <div className="h-[50px] px-4 flex items-center justify-between bg-rail-header border-b border-rail-border">
           <div className="flex items-center gap-2.5">
             <BrandMark inverted size="sm" />
-            <span className="text-xs font-bold uppercase tracking-wider text-white">Distribution</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-white">Commerce</span>
           </div>
           <button type="button" onClick={onClose} aria-label="Close menu" className="p-1.5 rounded-md hover:bg-rail-hover text-slate-300">
             <X className="w-5 h-5" />

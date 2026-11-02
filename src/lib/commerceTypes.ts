@@ -61,6 +61,7 @@ export interface StockTransaction {
   _id: string;
   txnNo: string;
   type: StockTxnType;
+  sku: string;
   product: NamedRef & { sku: string };
   /** Signed change: + adds stock, − removes it */
   change: number;

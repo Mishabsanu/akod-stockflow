@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { LowStockPage } from "@/components/inventory/InventoryPages";
 
 export const metadata = { title: "Low Stock" };
 
-export default function Page() {
-  return <ComingSoon title="Low Stock" description="Products at or below their reorder level" />;
+export default function Page({ searchParams }: PageProps<"/dashboard/inventory/low-stock">) {
+  return <LowStockPage searchParams={searchParams} />;
 }

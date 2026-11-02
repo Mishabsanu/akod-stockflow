@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { ProductListPage } from "@/components/products/ProductPages";
 
 export const metadata = { title: "Products" };
 
-export default function Page() {
-  return <ComingSoon title="Products" description="SKU, pricing, category and status — CSV import / export" />;
+export default function Page({ searchParams }: PageProps<"/dashboard/products">) {
+  return <ProductListPage searchParams={searchParams} />;
 }

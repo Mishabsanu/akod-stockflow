@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { AccountListPage } from "@/components/finance/accounts/AccountPages";
 
-export const metadata = { title: "Accounts & Ledger" };
+export const metadata = { title: "Accounts" };
 
 export default function Page() {
-  return <ComingSoon title="Accounts & Ledger" description="Cash and bank accounts with running balance" />;
+  return <AccountListPage />;
 }

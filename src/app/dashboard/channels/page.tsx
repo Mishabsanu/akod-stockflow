@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { ChannelListPage } from "@/components/channels/ChannelPages";
 
 export const metadata = { title: "Marketplaces" };
 
-export default function Page() {
-  return <ComingSoon title="Marketplaces" description="Amazon, Flipkart, Blinkit … and the products listed on each" />;
+export default function Page({ searchParams }: PageProps<"/dashboard/channels">) {
+  return <ChannelListPage searchParams={searchParams} />;
 }

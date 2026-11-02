@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   open: boolean;
@@ -24,10 +25,13 @@ export function Modal({ open, onClose, title, subtitle, icon, size = "md", foote
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  // Rendered at <body> so a modal form opened from inside another form (e.g. "+ New distributor" on the
+  // order form) is never a nested <form>; submit events stop here so they cannot submit the outer form.
+  return createPortal(
     <div
+      onSubmit={(e) => e.stopPropagation()}
       className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
       role="dialog"
@@ -65,6 +69,7 @@ export function Modal({ open, onClose, title, subtitle, icon, size = "md", foote
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

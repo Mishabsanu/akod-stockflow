@@ -1,6 +1,7 @@
 /**
- * First-run setup: creates the Super Admin role and user, starter roles, an optional test user
- * (SEED_TEST_*, given the "Manager" role) and the default Cash / Bank accounts.
+ * First-run setup: creates the Super Admin role and user, and the default Cash / Bank accounts.
+ * Optional: `--starter-roles` adds example roles (Manager, Sales Executive, Warehouse, Accountant);
+ * SEED_TEST_* in .env.local adds a test user with the Manager role (needs --starter-roles).
  * Safe to run again — existing users are left untouched, and existing starter roles only gain
  * permissions for modules they have no setting for yet (so new modules show up after an upgrade).
  *
@@ -16,26 +17,31 @@ const ALL = { view: true, create: true, update: true, delete: true };
 const EDIT = { view: true, create: true, update: true, delete: false };
 const VIEW = { view: true, create: false, update: false, delete: false };
 
-/** Starter roles; adjust any time from Settings → Roles & Permissions. */
-const ROLES = [
-  { name: "Super Admin", description: "Full access to every module", isSuperAdmin: true, permissions: {} },
+/** The one role every fresh install gets. */
+const SUPER_ADMIN = { name: "Super Admin", description: "Full access to every module", isSuperAdmin: true, permissions: {} };
+
+/** Optional example roles: `npm run seed -- --starter-roles`. Create your own in Settings → Roles & Permissions. */
+const STARTER_ROLES = [
   {
     name: "Manager",
     description: "Runs the business: products, stock, channels, orders and finance (no user / role admin)",
     permissions: {
-      product: ALL, stock: ALL, channel: ALL, order: ALL, customer: ALL,
+      product: ALL, stock: ALL, material_request: ALL, channel: ALL, order: ALL, customer: ALL,
       finance_dashboard: VIEW, income: EDIT, expense: EDIT, payment: EDIT, account: VIEW, report: VIEW,
     },
   },
   {
     name: "Sales Executive",
     description: "Creates and processes orders; sees products, stock and channels",
-    permissions: { product: VIEW, stock: VIEW, channel: VIEW, order: EDIT, customer: EDIT, payment: VIEW },
+    permissions: {
+      product: VIEW, stock: VIEW, channel: VIEW, order: EDIT, customer: EDIT, payment: { ...VIEW, create: true },
+      material_request: { ...VIEW, create: true },
+    },
   },
   {
     name: "Warehouse",
     description: "Stock updates, CSV stock upload, adjustments; processes and ships orders",
-    permissions: { product: VIEW, stock: EDIT, channel: VIEW, order: { ...VIEW, update: true }, report: VIEW },
+    permissions: { product: VIEW, stock: EDIT, material_request: EDIT, channel: VIEW, order: { ...VIEW, update: true }, report: VIEW },
   },
   {
     name: "Accountant",
@@ -60,6 +66,8 @@ function requireEnv(name) {
   }
   return value;
 }
+
+const ROLES = [SUPER_ADMIN, ...(process.argv.includes("--starter-roles") ? STARTER_ROLES : [])];
 
 async function main() {
   const uri = requireEnv("MONGODB_URI");
@@ -122,7 +130,7 @@ async function main() {
   }
 
   const people = [{ ...admin, roleId: superRoleId, label: "Super Admin" }];
-  if (process.env.SEED_TEST_EMAIL && process.env.SEED_TEST_PASSWORD) {
+  if (process.env.SEED_TEST_EMAIL && process.env.SEED_TEST_PASSWORD && roleIds.Manager) {
     people.push({
       name: process.env.SEED_TEST_NAME || "Test User",
       email: process.env.SEED_TEST_EMAIL.trim().toLowerCase(),

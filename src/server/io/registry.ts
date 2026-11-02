@@ -5,7 +5,10 @@ import type { SessionUser } from "@/lib/types";
 import { AppError, notFound } from "../http/errors";
 import { productsIo } from "./catalog.io";
 import { channelProductsIo, channelsIo } from "./channel.io";
+import { expensesIo, incomeIo, ledgerIo, paymentsIo } from "./finance.io";
 import { inventoryIo, stockTransactionsIo, stockUploadIo } from "./inventory.io";
+import { materialRequestsIo } from "./materialRequests.io";
+import { customersIo, ordersIo } from "./orders.io";
 import { buildCsv, buildWorkbook, headerKey, readUpload, type CellValue } from "./sheet";
 import type { ImportContext, ImportPreviewRow, ImportRecord, ImportResult, IoEntity } from "./types";
 
@@ -20,6 +23,13 @@ const ENTITIES: Record<string, IoEntity<never>> = {
   "stock-upload": stockUploadIo,
   channels: channelsIo,
   "channel-products": channelProductsIo,
+  "material-requests": materialRequestsIo,
+  orders: ordersIo,
+  customers: customersIo,
+  income: incomeIo,
+  expenses: expensesIo,
+  payments: paymentsIo,
+  ledger: ledgerIo,
 } as unknown as Record<string, IoEntity<never>>;
 
 export function getEntity(key: string, user: SessionUser, mode: "export" | "import"): IoEntity<never> {
@@ -74,7 +84,13 @@ function rowError(error: unknown): string {
  * Runs every row; a bad row is reported with its Excel row number and the rest still import.
  * With `dryRun` nothing is written: the result is a preview of what each row would do.
  */
-export async function importEntity(entity: IoEntity<never>, file: File, user: SessionUser, dryRun = false): Promise<ImportResult> {
+export async function importEntity(
+  entity: IoEntity<never>,
+  file: File,
+  user: SessionUser,
+  dryRun = false,
+  params: URLSearchParams = new URLSearchParams()
+): Promise<ImportResult> {
   const { headers, rows } = await readUpload(file);
   const byKey = new Map<string, (typeof entity.columns)[number]>();
   for (const col of entity.columns) {
@@ -88,7 +104,7 @@ export async function importEntity(entity: IoEntity<never>, file: File, user: Se
     throw new AppError(`The file needs a "${col?.header ?? requiredField}" column`, 422);
   }
 
-  const ctx: ImportContext = { dryRun, scratch: new Map() };
+  const ctx: ImportContext = { dryRun, scratch: new Map(), params };
   const result: ImportResult = { dryRun, total: rows.length, created: 0, updated: 0, errors: [], rows: [], ignored };
   for (const row of rows) {
     const record: ImportRecord = {};

@@ -1,0 +1,35 @@
+import * as Yup from "yup";
+import { optionalText, requiredText, rupees, statusField } from "./common";
+
+export const channelSchema = Yup.object({
+  name: requiredText("Channel name", 80),
+  code: requiredText("Channel code", 20).matches(/^[A-Za-z0-9\-_]+$/, "Code may only contain letters, numbers, - and _"),
+  description: optionalText("Description", 500),
+  status: statusField,
+});
+
+export type ChannelInput = Yup.InferType<typeof channelSchema>;
+
+export const emptyChannel: ChannelInput = { name: "", code: "", description: "", status: "active" };
+
+export const channelStatusSchema = Yup.object({ status: statusField.required() });
+
+const ids = Yup.array(Yup.string().required().matches(/^[a-f0-9]{24}$/i, "Invalid product"))
+  .min(1, "Select at least one product")
+  .max(1000, "Select at most 1000 products at a time")
+  .required()
+  .default([]);
+
+export const assignProductsSchema = Yup.object({ productIds: ids });
+
+export const removeChannelProductsSchema = Yup.object({
+  ids: Yup.array(Yup.string().required().matches(/^[a-f0-9]{24}$/i, "Invalid id")).min(1, "Select at least one product").required().default([]),
+});
+
+/** Listing details on one marketplace: its own SKU (ASIN / FSN …) and price (0 = product selling price). */
+export const channelProductSchema = Yup.object({
+  channelSku: optionalText("Marketplace SKU", 60),
+  channelPrice: rupees("Marketplace price"),
+});
+
+export type ChannelProductInput = Yup.InferType<typeof channelProductSchema>;

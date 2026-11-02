@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { IncomeListPage } from "@/components/finance/income/IncomePage";
 
 export const metadata = { title: "Income" };
 
-export default function Page() {
-  return <ComingSoon title="Income" description="Order income and other income" />;
+export default function Page({ searchParams }: PageProps<"/dashboard/finance/income">) {
+  return <IncomeListPage searchParams={searchParams} />;
 }

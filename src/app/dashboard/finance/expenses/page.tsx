@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { ExpenseListPage } from "@/components/finance/expenses/ExpensePages";
 
 export const metadata = { title: "Expenses" };
 
-export default function Page() {
-  return <ComingSoon title="Expenses" description="Business expenses and their payments" />;
+export default function Page({ searchParams }: PageProps<"/dashboard/finance/expenses">) {
+  return <ExpenseListPage searchParams={searchParams} />;
 }

@@ -48,17 +48,19 @@ export function Badge({ children, variant = "neutral", size = "sm", dot = false,
 const STATUS_VARIANTS: Record<string, BadgeVariant> = {
   active: "success",
   inactive: "neutral",
-  // Price channels
-  STOCK_HOLDER: "brand",
-  DISTRIBUTOR: "info",
-  RETAIL: "success",
   // Orders
-  PLACED: "warning",
+  DRAFT: "neutral",
   CONFIRMED: "info",
-  PICKED: "brand",
-  DISPATCHED: "warning",
-  DELIVERED: "success",
+  PROCESSING: "warning",
+  COMPLETED: "success",
   CANCELLED: "neutral",
+  RETURNED: "danger",
+  // Payments / expenses
+  UNPAID: "danger",
+  PENDING: "warning",
+  PARTIAL: "warning",
+  PAID: "success",
+  REFUND_DUE: "danger",
 };
 
 /** Status pill used across all tables. */

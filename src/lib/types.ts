@@ -2,6 +2,7 @@ import type { PermissionMap } from "./permissions";
 
 export * from "./commerceTypes";
 export * from "./financeTypes";
+export * from "./materialRequestTypes";
 
 export type RecordStatus = "active" | "inactive";
 

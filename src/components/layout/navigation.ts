@@ -42,6 +42,7 @@ export const NAV_MODULES: NavModule[] = [
       { label: "Stock Overview", href: "/dashboard/inventory", permission: "stock" },
       { label: "Stock Update", href: "/dashboard/inventory/update", permission: "stock" },
       { label: "Low Stock", href: "/dashboard/inventory/low-stock", permission: "stock" },
+      { label: "Material Requests", href: "/dashboard/inventory/requests", permission: "material_request" },
       { label: "Transactions", href: "/dashboard/inventory/transactions", permission: "stock" },
     ],
   },

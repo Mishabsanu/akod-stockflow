@@ -1,7 +1,8 @@
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { ReportScreen } from "@/components/reports/ReportScreen";
 
 export const metadata = { title: "Receivables" };
 
-export default function Page() {
-  return <ComingSoon title="Receivables" description="Money owed by customers, distributors and marketplaces" />;
+/** Outstanding on confirmed orders; "Record payment" opens the order, which holds the payment form. */
+export default function Page({ searchParams }: PageProps<"/dashboard/finance/receivables">) {
+  return <ReportScreen reportKey="receivables" searchParams={searchParams} itemName="receivables" />;
 }

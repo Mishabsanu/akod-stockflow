@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { OrderListPage } from "@/components/orders/OrderPages";
 
 export const metadata = { title: "Distributor Orders" };
 
-export default function Page() {
-  return <ComingSoon title="Distributor Orders" description="Distributor orders with credit tracking" />;
+export default function Page({ searchParams }: PageProps<"/dashboard/orders/distributor">) {
+  return <OrderListPage searchParams={searchParams} type="DISTRIBUTOR" />;
 }

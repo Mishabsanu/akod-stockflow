@@ -21,5 +21,6 @@ export const POST = apiHandler<{ entity: string }>("authenticated", async ({ req
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) throw new AppError("Choose a file to upload", 422);
-  return importEntity(entity, file, user, req.nextUrl.searchParams.get("dryRun") === "1");
+  const search = req.nextUrl.searchParams;
+  return importEntity(entity, file, user, search.get("dryRun") === "1", search);
 });

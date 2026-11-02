@@ -20,6 +20,8 @@ interface ImportExportProps {
   showExport?: boolean;
   /** Label of the import button */
   importLabel?: string;
+  /** Extra query params sent with export, templates and upload, e.g. { channel: id } */
+  params?: Record<string, string>;
 }
 
 const linkBtn =
@@ -28,7 +30,7 @@ const linkBtn =
 type Step = "choose" | "preview" | "done";
 
 /** Export (CSV / Excel, same filters as the screen) and Import (Excel / CSV with a preview first). */
-export function ImportExport({ entity, title, canImport = false, importHint, showExport = true, importLabel = "Import" }: ImportExportProps) {
+export function ImportExport({ entity, title, canImport = false, importHint, showExport = true, importLabel = "Import", params }: ImportExportProps) {
   const router = useRouter();
   const search = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -44,6 +46,9 @@ export function ImportExport({ entity, title, canImport = false, importHint, sho
   const qs = new URLSearchParams(search.toString());
   qs.delete("page");
   qs.delete("limit");
+  for (const [k, v] of Object.entries(params ?? {})) qs.set(k, v);
+  const extra = new URLSearchParams(params ?? {});
+  const withExtra = (q: Record<string, string>) => `${base}?${new URLSearchParams({ ...Object.fromEntries(extra), ...q })}`;
   const exportHref = (format: "csv" | "xlsx") => {
     const q = new URLSearchParams(qs);
     q.set("format", format);
@@ -70,7 +75,7 @@ export function ImportExport({ entity, title, canImport = false, importHint, sho
     try {
       const body = new FormData();
       body.append("file", file);
-      const res = await fetch(`${base}${dryRun ? "?dryRun=1" : ""}`, { method: "POST", body, credentials: "same-origin" });
+      const res = await fetch(withExtra(dryRun ? { dryRun: "1" } : {}), { method: "POST", body, credentials: "same-origin" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Import failed");
       setResult(data);
@@ -157,11 +162,11 @@ export function ImportExport({ entity, title, canImport = false, importHint, sho
             <ol className="list-decimal pl-4 space-y-1.5">
               <li>
                 Download a{" "}
-                <a href={`${base}?template=1&format=csv`} className="font-bold text-brand hover:underline">
+                <a href={withExtra({ template: "1", format: "csv" })} className="font-bold text-brand hover:underline">
                   CSV template
                 </a>{" "}
                 or{" "}
-                <a href={`${base}?template=1`} className="font-bold text-brand hover:underline">
+                <a href={withExtra({ template: "1" })} className="font-bold text-brand hover:underline">
                   Excel template
                 </a>
                 {showExport && (

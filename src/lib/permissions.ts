@@ -12,6 +12,7 @@ export const PERMISSION_GROUPS = [
     modules: [
       { key: "product", label: "Products — create, edit, CSV import / export" },
       { key: "stock", label: "Inventory — stock update, CSV upload, adjustments, history" },
+      { key: "material_request", label: "Material Requests — raise (create), approve / reject / receive into stock (update)" },
       { key: "channel", label: "Channels — marketplaces and their assigned products" },
     ],
   },
@@ -91,6 +92,6 @@ export function normalizePermissions(input: unknown): Record<PermissionModule, M
 }
 
 /** Where a user lands after sign-in. */
-export function homePath(_user?: AccessProfile): string {
+export function homePath(): string {
   return "/dashboard/overview";
 }
