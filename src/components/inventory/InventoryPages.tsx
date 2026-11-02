@@ -89,7 +89,7 @@ export async function StockUpdatePage({ searchParams }: { searchParams: SearchPa
     <div className="space-y-4">
       <PageHeader
         title="Stock Update"
-        description="Add stock manually, or upload a CSV with SKU Code, Quantity, PO Number (optional) and Transaction Date"
+        description="Add stock manually, or upload a CSV with SKU Code, Quantity, PO Number (optional) and Date"
         actions={
           <ImportExport
             entity="stock-upload"

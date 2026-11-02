@@ -10,7 +10,7 @@ import { FormSection } from "@/components/forms/FormCard";
 import { SelectField, TextAreaField, TextField } from "@/components/forms/FormikFields";
 import { CustomerFormModal } from "@/components/customers/CustomerFormModal";
 import type { OrderType } from "@/lib/commerceTypes";
-import { addDays, todayIST } from "@/lib/indiaDate";
+import { todayIST } from "@/lib/indiaDate";
 import type { Option } from "@/lib/types";
 import { orderSchema, type OrderInput } from "@/lib/validation/order.schema";
 import type { CustomerOption } from "@/server/services/customer.service";
@@ -44,6 +44,7 @@ function initialValues(initial: OrderRecord | undefined, defaultType?: OrderType
       dueDate: "",
       items: [{ product: "", quantity: 1, price: 0 }],
       discount: 0,
+      shipping: 0,
       taxPercent: 0,
       upfrontPayment: 0,
       upfrontPaymentMethod: "",
@@ -64,6 +65,7 @@ function initialValues(initial: OrderRecord | undefined, defaultType?: OrderType
     dueDate: initial.dueDate ?? "",
     items: initial.items.map((i) => ({ product: i.product, quantity: i.quantity, price: i.price })),
     discount: initial.discount,
+    shipping: initial.shipping ?? 0,
     taxPercent: initial.taxPercent,
     upfrontPayment: initial.upfrontPayment,
     upfrontPaymentMethod: initial.upfrontPaymentMethod as OrderInput["upfrontPaymentMethod"],
@@ -175,10 +177,8 @@ function OrderFormBody({
     setValues({ ...values, orderType: next, channel: "", customer: "", dueDate: "", items: [{ product: "", quantity: 1, price: 0 }] }, false);
   };
 
-  const pickDistributor = (id: string, list = distributors) => {
+  const pickDistributor = (id: string) => {
     setFieldValue("customer", id);
-    const d = list.find((x) => x.value === id);
-    if (d && d.creditDays > 0) setFieldValue("dueDate", addDays(values.orderDate || todayIST(), d.creditDays));
   };
 
   // Lines whose product is not sold on the newly chosen marketplace are cleared
@@ -300,12 +300,6 @@ function OrderFormBody({
                 maxLength={100}
               />
               <TextField name="orderDate" label="Order Date" type="date" required />
-              <TextField
-                name="dueDate"
-                label="Payment Due Date"
-                type="date"
-                hint={type === "DISTRIBUTOR" ? "From the distributor's credit days" : "Optional"}
-              />
               {type !== "DISTRIBUTOR" && (
                 <>
                   <TextField name="customerName" label={type === "MARKETPLACE" ? "Buyer Name" : "Customer Name"} placeholder="Optional" maxLength={150} />
@@ -382,7 +376,7 @@ function OrderFormBody({
             };
             const next = [...distributors, option].sort((a, b) => a.label.localeCompare(b.label));
             setDistributors(next);
-            pickDistributor(c._id, next);
+            pickDistributor(c._id);
           }}
         />
       )}

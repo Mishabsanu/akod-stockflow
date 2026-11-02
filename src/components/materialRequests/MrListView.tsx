@@ -44,7 +44,7 @@ export function MrListView({ data }: { data: Paginated<MaterialRequest> }) {
           </Link>
         ),
       },
-      { key: "priority", label: "Priority", align: "center", render: (r) => <MrPriorityBadge priority={r.priority ?? "MEDIUM"} /> },
+      { key: "priority", label: "Top Priority", align: "center", render: (r) => <MrPriorityBadge priority={r.priority ?? "MEDIUM"} /> },
       { key: "requestDate", label: "Request Date", render: (r) => formatDay(r.requestDate) },
       { key: "requiredBy", label: "Required By", render: (r) => (r.requiredBy ? formatDay(r.requiredBy) : "—") },
       { key: "requestedByName", label: "Requested By", render: (r) => <span className="font-semibold">{r.requestedByName}</span> },

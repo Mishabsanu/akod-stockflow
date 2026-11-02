@@ -22,6 +22,7 @@ export const ordersIo: IoEntity<Order> = {
     { header: "Subtotal", width: 12, value: (o) => o.subtotal },
     { header: "Discount", width: 11, value: (o) => o.discount },
     { header: "Tax", width: 10, value: (o) => o.tax },
+    { header: "Shipping", width: 10, value: (o) => o.shipping },
     { header: "Total", width: 12, value: (o) => o.total },
     { header: "Paid", width: 12, value: (o) => o.paid },
     { header: "Outstanding", width: 13, value: (o) => o.outstanding },

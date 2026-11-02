@@ -1,6 +1,6 @@
 import "server-only";
 import { isValidObjectId, Types } from "mongoose";
-import type { MaterialRequest, MrStatus } from "@/lib/materialRequestTypes";
+import { highestPriority, type MaterialRequest, type MrPriority, type MrStatus } from "@/lib/materialRequestTypes";
 import type { Paginated, SessionUser } from "@/lib/types";
 import type { MaterialRequestInput, MrActionInput, MrReceiveInput } from "@/lib/validation/materialRequest.schema";
 import { nextCode } from "../models/Counter";
@@ -83,19 +83,20 @@ async function buildItems(items: MaterialRequestInput["items"]) {
     const p = byId.get(i.product);
     if (!p) throw new AppError(`Line ${n + 1}: product not found`, 422);
     if (p.status !== "active") throw new AppError(`${p.sku} is inactive`, 409);
-    return { product: p._id, sku: p.sku, name: p.name, quantity: i.quantity, receivedQty: 0 };
+    return { product: p._id, sku: p.sku, name: p.name, quantity: i.quantity, receivedQty: 0, priority: (i.priority ?? "MEDIUM") as MrPriority };
   });
 }
 
 export async function createMaterialRequest(input: MaterialRequestInput, user: SessionUser): Promise<MaterialRequest> {
+  const items = await buildItems(input.items);
   const doc = await MrModel.create({
     mrNo: await nextCode("material_request", "MR", 5),
     requestDate: input.requestDate,
     requiredBy: input.requiredBy ?? "",
-    priority: input.priority ?? "MEDIUM",
+    priority: highestPriority(items.map((i) => i.priority)),
     requestedBy: user._id,
     requestedByName: user.name,
-    items: await buildItems(input.items),
+    items,
     notes: input.notes ?? "",
     status: "PENDING",
     history: [event("PENDING", user, "Request raised")],
@@ -112,9 +113,18 @@ function assertEditable(doc: MaterialRequestDoc, user: SessionUser, canApprove: 
 export async function updateMaterialRequest(id: string, input: MaterialRequestInput, user: SessionUser, canApprove: boolean) {
   const doc = await loadDoc(id);
   assertEditable(doc, user, canApprove);
+  const items = await buildItems(input.items);
   const res = await MrModel.updateOne(
     { _id: doc._id, status: "PENDING" },
-    { $set: { requestDate: input.requestDate, requiredBy: input.requiredBy ?? "", priority: input.priority ?? "MEDIUM", items: await buildItems(input.items), notes: input.notes ?? "" } }
+    {
+      $set: {
+        requestDate: input.requestDate,
+        requiredBy: input.requiredBy ?? "",
+        priority: highestPriority(items.map((i) => i.priority)),
+        items,
+        notes: input.notes ?? "",
+      },
+    }
   );
   if (res.matchedCount !== 1) throw new AppError("This request was changed by someone else. Refresh and try again.", 409);
   return getMaterialRequest(id);

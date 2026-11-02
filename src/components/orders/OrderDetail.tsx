@@ -226,6 +226,7 @@ export function OrderDetail({ order, payments, accounts, canUpdate, canPay, comp
               <Total label="Subtotal" value={formatCurrency(order.subtotal)} />
               {order.discount > 0 && <Total label="Discount" value={`− ${formatCurrency(order.discount)}`} />}
               {order.tax > 0 && <Total label={`Tax (${order.taxPercent}%)`} value={formatCurrency(order.tax)} />}
+              {order.shipping > 0 && <Total label="Shipping" value={formatCurrency(order.shipping)} />}
               <Total label="Total" value={formatCurrency(order.total)} strong />
               <Total label="Paid" value={formatCurrency(order.paid)} />
               {counted && (
@@ -248,7 +249,7 @@ export function OrderDetail({ order, payments, accounts, canUpdate, canPay, comp
             {order.orderType === "MARKETPLACE" && <Row label="Marketplace" value={order.channel?.name} />}
             <Row label={order.orderType === "MARKETPLACE" ? "Marketplace Order ID" : "Reference"} value={order.orderReference} mono />
             <Row label="Order Date" value={formatDay(order.orderDate)} />
-            <Row label="Payment Due" value={order.dueDate ? formatDay(order.dueDate) : ""} />
+            {order.dueDate && <Row label="Payment Due" value={formatDay(order.dueDate)} />}
             <Row label="Created By" value={order.createdBy?.name} />
             <Row label="Created" value={formatDateTime(order.createdAt)} />
           </SideCard>

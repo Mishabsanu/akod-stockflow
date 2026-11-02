@@ -14,11 +14,22 @@ import { OrderStatusBadge } from "./OrderBadges";
 
 const NEEDS_REASON: OrderStatus[] = ["CANCELLED", "RETURNED"];
 
+/** Text / border colour of the inline dropdown, matching the status badges. */
+const INLINE_TONE: Record<OrderStatus, string> = {
+  PENDING: "border-slate-300 text-slate-700",
+  CONFIRMED: "border-sky-300 text-sky-700",
+  SHIPPED: "border-amber-300 text-amber-700",
+  DELIVERED: "border-violet-300 text-violet-700",
+  COMPLETED: "border-emerald-300 text-emerald-700",
+  CANCELLED: "border-rose-300 text-rose-700",
+  RETURNED: "border-rose-300 text-rose-700",
+};
+
 /**
  * "Change status" dropdown: pick any allowed status (Pending, Confirmed, Shipped, Delivered, Completed,
  * Cancelled …). A confirm dialog says what happens to stock / income; cancel and return ask for a reason.
  */
-export function OrderActions({ order }: { order: Order }) {
+export function OrderActions({ order, inline = false }: { order: Order; /** Compact dropdown for list rows: shows the current status, choosing one opens the confirm dialog */ inline?: boolean }) {
   const router = useRouter();
   const next = ORDER_TRANSITIONS[order.status];
   const [choice, setChoice] = useState<OrderStatus | "">("");
@@ -62,9 +73,32 @@ export function OrderActions({ order }: { order: Order }) {
 
   const effect = target ? statusChangeEffect(order.status, target) : null;
 
+  const picker = inline ? (
+    <select
+      aria-label={`Change status of ${order.orderNo}`}
+      value={target ?? order.status}
+      onChange={(e) => {
+        const next = e.target.value as OrderStatus;
+        if (next === order.status) return;
+        setTarget(next);
+        setNote("");
+      }}
+      onClick={(e) => e.stopPropagation()}
+      className={`h-7 pl-2 pr-6 text-[11px] font-bold rounded-md border cursor-pointer bg-white focus:outline-none focus:border-brand ${INLINE_TONE[order.status]}`}
+    >
+      <option value={order.status}>{ORDER_STATUS_LABELS[order.status]}</option>
+      {next.map((s) => (
+        <option key={s} value={s}>
+          → {ORDER_STATUS_LABELS[s]}
+        </option>
+      ))}
+    </select>
+  ) : null;
+
   return (
     <>
-      <div className="flex items-center gap-2 w-full sm:w-auto">
+      {picker}
+      <div className={inline ? "hidden" : "flex items-center gap-2 w-full sm:w-auto"}>
         <label htmlFor={`status-${order._id}`} className="sr-only">
           Change order status
         </label>

@@ -182,6 +182,8 @@ export interface Order {
   discount: number;
   taxPercent: number;
   tax: number;
+  /** Optional shipping charge (added after tax) */
+  shipping: number;
   total: number;
   paid: number;
   outstanding: number;

@@ -14,6 +14,7 @@ const qty = (label: string) =>
 export const mrItemSchema = Yup.object({
   product: objectId("Product"),
   quantity: qty("Required quantity"),
+  priority: Yup.string().oneOf(MR_PRIORITIES, "Choose High, Medium or Low").default("MEDIUM"),
 });
 
 /** Raise / edit a request. "Requested by" is never sent — the server uses the signed-in user. */
@@ -26,7 +27,6 @@ export const materialRequestSchema = Yup.object({
       return !v || !this.parent.requestDate || v >= this.parent.requestDate;
     }
   ),
-  priority: Yup.string().oneOf(MR_PRIORITIES, "Choose High, Medium or Low").default("MEDIUM"),
   items: Yup.array()
     .of(mrItemSchema)
     .min(1, "Add at least one product")

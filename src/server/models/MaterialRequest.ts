@@ -7,6 +7,7 @@ export interface MrItemDoc {
   name: string;
   quantity: number;
   receivedQty: number;
+  priority: MrPriority;
 }
 
 export interface MrEventDoc {
@@ -21,6 +22,7 @@ export interface MaterialRequestDoc {
   mrNo: string;
   requestDate: string;
   requiredBy?: string;
+  /** Highest priority among the products */
   priority: MrPriority;
   /** Always the signed-in user who raised it */
   requestedBy: Types.ObjectId;
@@ -44,6 +46,7 @@ const ItemSchema = new Schema<MrItemDoc>(
     name: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     receivedQty: { type: Number, default: 0, min: 0 },
+    priority: { type: String, enum: MR_PRIORITIES, default: "MEDIUM" },
   },
   { _id: false }
 );

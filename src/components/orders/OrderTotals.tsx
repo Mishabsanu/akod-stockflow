@@ -7,12 +7,13 @@ import type { OrderInput } from "@/lib/validation/order.schema";
 import { PAYMENT_METHOD_OPTIONS, TAX_PRESETS } from "./orderConfig";
 
 /** Same arithmetic as the server (which recomputes on save). */
-export function computeTotals(values: Pick<OrderInput, "items" | "discount" | "taxPercent">) {
+export function computeTotals(values: Pick<OrderInput, "items" | "discount" | "taxPercent" | "shipping">) {
   const subtotal = values.items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.price) || 0), 0);
   const discount = Math.min(Number(values.discount) || 0, subtotal);
   const taxPercent = Number(values.taxPercent) || 0;
   const tax = Math.round((subtotal - discount) * taxPercent) / 100;
-  return { subtotal, discount, tax, total: subtotal - discount + tax };
+  const shipping = Number(values.shipping) || 0;
+  return { subtotal, discount, tax, shipping, total: subtotal - discount + tax + shipping };
 }
 
 /** Discount, tax %, live totals and the payment taken with the order. */
@@ -26,6 +27,16 @@ export function OrderTotals() {
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TextField name="discount" label="Discount (₹)" type="number" min={0} step="0.01" inputMode="decimal" />
+          <TextField
+            name="shipping"
+            label="Shipping Charge (₹)"
+            type="number"
+            min={0}
+            step="0.01"
+            inputMode="decimal"
+            hint="Optional — added to the total"
+            className="sm:order-last"
+          />
           <div className="space-y-1.5">
             <TextField name="taxPercent" label="Tax %" type="number" min={0} max={100} step="0.01" hint="Optional" />
             <div className="flex gap-1.5">
@@ -68,6 +79,7 @@ export function OrderTotals() {
           <Row label="Subtotal" value={formatCurrency(t.subtotal)} />
           <Row label="Discount" value={t.discount ? `− ${formatCurrency(t.discount)}` : formatCurrency(0)} />
           <Row label={`Tax${Number(values.taxPercent) ? ` (${values.taxPercent}%)` : ""}`} value={formatCurrency(t.tax)} />
+          <Row label="Shipping" value={formatCurrency(t.shipping)} />
           <div className="flex items-center justify-between px-4 py-3 bg-brand-light/60">
             <dt className="text-sm font-bold text-slate-900">Order Total</dt>
             <dd className="text-base font-black text-brand">{formatCurrency(t.total)}</dd>

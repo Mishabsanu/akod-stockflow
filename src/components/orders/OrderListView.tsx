@@ -6,10 +6,11 @@ import { usePermission } from "@/components/providers/SessionProvider";
 import { DataTable } from "@/components/table/DataTable";
 import { RowActions } from "@/components/table/RowActions";
 import type { Column, FilterConfig } from "@/components/table/types";
-import { ORDER_TYPE_LABELS, ORDER_TYPES, type Order, type OrderType } from "@/lib/commerceTypes";
+import { ORDER_TRANSITIONS, ORDER_TYPE_LABELS, ORDER_TYPES, type Order, type OrderType } from "@/lib/commerceTypes";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { formatDay } from "@/lib/indiaDate";
 import type { Option, Paginated } from "@/lib/types";
+import { OrderActions } from "./OrderActions";
 import { OrderStatusBadge, OrderTypeBadge, PaymentStatusBadge } from "./OrderBadges";
 import { ORDER_STATUS_OPTIONS, ORDER_UI, PAYMENT_STATUS_OPTIONS } from "./orderConfig";
 
@@ -79,7 +80,12 @@ export function OrderListView({ data, channels, fixedType }: OrderListViewProps)
         align: "center",
         render: (o) => <PaymentStatusBadge status={o.paymentStatus} orderStatus={o.status} />,
       },
-      { key: "status", label: "Status", align: "center", render: (o) => <OrderStatusBadge status={o.status} /> },
+      {
+        key: "status",
+        label: "Status",
+        align: "center",
+        render: (o) => (canEdit && ORDER_TRANSITIONS[o.status].length ? <OrderActions order={o} inline /> : <OrderStatusBadge status={o.status} />),
+      },
       {
         key: "trackingNumber",
         label: "Tracking",
@@ -96,7 +102,7 @@ export function OrderListView({ data, channels, fixedType }: OrderListViewProps)
       { key: "dueDate", label: "Due", hiddenByDefault: true, render: (o) => (o.dueDate ? formatDay(o.dueDate) : "—") },
     ];
     return cols.filter(Boolean) as Column<Order>[];
-  }, [fixedType]);
+  }, [fixedType, canEdit]);
 
   const filters = useMemo<FilterConfig[]>(() => {
     const list: FilterConfig[] = [];

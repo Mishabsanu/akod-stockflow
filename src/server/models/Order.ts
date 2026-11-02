@@ -37,6 +37,8 @@ export interface OrderDoc {
   discountPaise: number;
   taxPercent: number;
   taxPaise: number;
+  /** Optional delivery / shipping charge, added after tax */
+  shippingPaise: number;
   totalPaise: number;
   /** Received − refunded, kept in step with Payments by settlement.ts */
   paidPaise: number;
@@ -98,6 +100,7 @@ const OrderSchema = new Schema<OrderDoc>(
     discountPaise: { type: Number, default: 0, min: 0 },
     taxPercent: { type: Number, default: 0, min: 0 },
     taxPaise: { type: Number, default: 0, min: 0 },
+    shippingPaise: { type: Number, default: 0, min: 0 },
     totalPaise: { type: Number, default: 0, min: 0 },
     paidPaise: { type: Number, default: 0 },
     outstandingPaise: { type: Number, default: 0, min: 0 },

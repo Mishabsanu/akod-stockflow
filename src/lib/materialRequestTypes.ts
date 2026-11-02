@@ -19,12 +19,21 @@ export type MrPriority = (typeof MR_PRIORITIES)[number];
 
 export const MR_PRIORITY_LABELS: Record<MrPriority, string> = { HIGH: "High", MEDIUM: "Medium", LOW: "Low" };
 
+/** The most urgent of several priorities (High beats Medium beats Low). */
+export function highestPriority(list: (MrPriority | undefined)[]): MrPriority {
+  if (list.includes("HIGH")) return "HIGH";
+  if (list.includes("MEDIUM") || list.some((p) => !p)) return "MEDIUM";
+  return list.length ? "LOW" : "MEDIUM";
+}
+
 export interface MaterialRequestItem {
   product: string;
   sku: string;
   name: string;
   quantity: number;
   receivedQty: number;
+  /** Priority of this product */
+  priority: MrPriority;
   /** Current central stock (filled on the detail page) */
   stock?: number;
 }
@@ -41,6 +50,7 @@ export interface MaterialRequest {
   mrNo: string;
   requestDate: string;
   requiredBy?: string;
+  /** Highest priority among the products (for sorting / filtering requests) */
   priority: MrPriority;
   requestedBy: { _id: string; name: string } | null;
   requestedByName: string;

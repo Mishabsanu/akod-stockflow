@@ -67,7 +67,7 @@ function readDay(value: unknown): string {
     const d = new Date(Date.UTC(1899, 11, 30) + Number(s) * 86400000);
     return d.toISOString().slice(0, 10);
   }
-  throw new AppError(`Transaction Date "${s}" is not a date — use YYYY-MM-DD or DD-MM-YYYY`);
+  throw new AppError(`Date "${s}" is not a date — use YYYY-MM-DD or DD-MM-YYYY`);
 }
 
 interface UploadRow {
@@ -78,7 +78,7 @@ interface UploadRow {
 }
 
 /**
- * Stock Update CSV: SKU Code, Quantity, PO Number (optional), Transaction Date.
+ * Stock Update CSV: SKU Code, Quantity, PO Number (optional), Date.
  * Adds the quantity to the product's central stock; the preview shows previous → updated stock.
  */
 export const stockUploadIo: IoEntity<UploadRow> = {
@@ -92,7 +92,7 @@ export const stockUploadIo: IoEntity<UploadRow> = {
     { header: "SKU Code", field: "sku", value: (r) => r.sku, width: 22, aliases: ["sku", "skucode"] },
     { header: "Quantity", field: "quantity", value: (r) => r.quantity, numeric: true, width: 12, aliases: ["qty", "stock"] },
     { header: "PO Number", field: "poNumber", value: (r) => r.poNumber, width: 16, aliases: ["po", "pono", "purchaseorder"] },
-    { header: "Transaction Date", field: "txnDate", value: (r) => r.txnDate, width: 16, aliases: ["date", "txndate"] },
+    { header: "Date", field: "txnDate", value: (r) => r.txnDate, width: 14, aliases: ["transaction date", "txndate", "txn date"] },
   ],
   async importRow(record, user, ctx) {
     const sku = String(record.sku ?? "").trim().toUpperCase();

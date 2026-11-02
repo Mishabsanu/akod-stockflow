@@ -77,7 +77,7 @@ export function StockInForm({ products, preselect }: { products: PickerProduct[]
             <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <ProductField products={products} />
               <TextField name="quantity" label="Quantity" required type="number" min={1} step={1} inputMode="numeric" />
-              <TextField name="txnDate" label="Transaction Date" required type="date" max={todayIST()} />
+              <TextField name="txnDate" label="Date" required type="date" max={todayIST()} />
               <TextField name="poNumber" label="PO Number" placeholder="Optional reference" hint="Reference only" />
               <TextField name="reason" label="Note" placeholder="Optional" />
             </div>

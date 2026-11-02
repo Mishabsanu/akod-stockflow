@@ -64,6 +64,7 @@ function toOrder(doc: PopulatedOrder): Order {
     discount: fromPaise(p.discountPaise),
     taxPercent: p.taxPercent,
     tax: fromPaise(p.taxPaise),
+    shipping: fromPaise(p.shippingPaise ?? 0),
     total: fromPaise(p.totalPaise),
     paid: fromPaise(p.paidPaise),
     outstanding: fromPaise(p.outstandingPaise),
@@ -209,7 +210,8 @@ async function buildOrder(input: OrderInput) {
   if (discountPaise > subtotalPaise) throw new AppError("Discount cannot be more than the subtotal", 422, { discount: "More than the subtotal" });
   const taxPercent = Number(input.taxPercent) || 0;
   const taxPaise = Math.round(((subtotalPaise - discountPaise) * taxPercent) / 100);
-  const totalPaise = subtotalPaise - discountPaise + taxPaise;
+  const shippingPaise = toPaise(input.shipping);
+  const totalPaise = subtotalPaise - discountPaise + taxPaise + shippingPaise;
   const upfrontPaymentPaise = toPaise(input.upfrontPayment);
   if (upfrontPaymentPaise > totalPaise) {
     throw new AppError("Amount paid cannot be more than the order total", 422, { upfrontPayment: "More than the order total" });
@@ -230,6 +232,7 @@ async function buildOrder(input: OrderInput) {
     discountPaise,
     taxPercent,
     taxPaise,
+    shippingPaise,
     totalPaise,
     // Pending: nothing is owed yet; settlement takes over once confirmed
     paidPaise: 0,

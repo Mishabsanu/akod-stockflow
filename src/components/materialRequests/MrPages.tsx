@@ -17,7 +17,7 @@ import { orNotFound } from "@/server/utils/pageData";
 import { MrActions } from "./MrActions";
 import { MrForm } from "./MrForm";
 import { MrListView } from "./MrListView";
-import { MR_UI, MrStatusBadge } from "./mrUi";
+import { MR_UI, MrPriorityBadge, MrStatusBadge } from "./mrUi";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 type IdParams = Promise<{ id: string }>;
@@ -86,7 +86,7 @@ export async function MrDetailPage({ params }: { params: IdParams }) {
         <DetailSection title="Request">
           <DetailItem label="Requested By" value={mr.requestedByName} />
           <DetailItem label="Request Date" value={formatDay(mr.requestDate)} />
-          <DetailItem label="Priority" value={MR_PRIORITY_LABELS[mr.priority ?? "MEDIUM"]} />
+          <DetailItem label="Highest Priority" value={MR_PRIORITY_LABELS[mr.priority ?? "MEDIUM"]} />
           <DetailItem label="Required By" value={mr.requiredBy ? formatDay(mr.requiredBy) : "—"} />
           <DetailItem label="Status" value={MR_STATUS_LABELS[mr.status]} />
           <DetailItem label="Approved By" value={mr.approvedByName ? `${mr.approvedByName} · ${formatDateTime(mr.approvedAt)}` : "—"} />
@@ -107,6 +107,7 @@ export async function MrDetailPage({ params }: { params: IdParams }) {
             <thead className="bg-slate-50 text-[10.5px] uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="text-left px-4 py-2">Product</th>
+                <th className="text-center px-4 py-2">Priority</th>
                 <th className="text-right px-4 py-2">Required</th>
                 <th className="text-right px-4 py-2">Received</th>
                 <th className="text-right px-4 py-2">Remaining</th>
@@ -121,6 +122,9 @@ export async function MrDetailPage({ params }: { params: IdParams }) {
                       <span className="block font-semibold text-slate-900">{i.name}</span>
                       <span className="font-mono text-[11px] text-slate-500">{i.sku}</span>
                     </Link>
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    <MrPriorityBadge priority={i.priority ?? "MEDIUM"} />
                   </td>
                   <td className="px-4 py-2.5 text-right font-semibold">{formatNumber(i.quantity)}</td>
                   <td className="px-4 py-2.5 text-right text-emerald-700">{formatNumber(i.receivedQty)}</td>

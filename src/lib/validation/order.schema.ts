@@ -35,6 +35,7 @@ export const orderSchema = Yup.object({
   dueDate: optionalDay("Due date"),
   items: Yup.array(itemSchema).min(1, "Add at least one product").max(200, "At most 200 lines per order").required(),
   discount: rupees("Discount"),
+  shipping: rupees("Shipping charge").max(10000000, "Shipping charge is too large"),
   taxPercent: Yup.number()
     .transform((v, o) => (o === "" || o === null ? undefined : v))
     .typeError("Tax % must be a number")
