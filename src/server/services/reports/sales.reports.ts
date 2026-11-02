@@ -7,6 +7,7 @@ import {
   ORDER_TYPES,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUSES,
+  SALE_STATUSES,
   type OrderStatus,
   type OrderType,
   type PaymentStatus,
@@ -21,9 +22,10 @@ import { saleOrderMatch } from "./metrics";
 const title = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 
 export const STATUS_TONE: Record<OrderStatus, ReportRow["tone"]> = {
-  DRAFT: "neutral",
+  PENDING: "neutral",
   CONFIRMED: "info",
-  PROCESSING: "brand",
+  SHIPPED: "brand",
+  DELIVERED: "info",
   COMPLETED: "success",
   CANCELLED: "danger",
   RETURNED: "warning",
@@ -98,7 +100,7 @@ export const orderReport: ReportDef = {
       Order.aggregate([{ $match: match }, { $sort: { [ctx.sort.field]: ctx.sort.dir } }, { $skip: skip }, { $limit: limit }, ...channelLookup]),
       Order.countDocuments(match),
       Order.aggregate<{ total: number; outstanding: number }>([
-        { $match: { ...match, status: { $in: ["CONFIRMED", "PROCESSING", "COMPLETED"] } } },
+        { $match: { ...match, status: { $in: SALE_STATUSES } } },
         { $group: { _id: null, total: { $sum: "$totalPaise" }, outstanding: { $sum: "$outstandingPaise" } } },
       ]),
     ]);
@@ -221,12 +223,12 @@ export const marketplaceSalesReport = salesRegister(
   "MARKETPLACE",
   "marketplace-sales",
   "Marketplace Sales Report",
-  "Product-wise sales on each marketplace (confirmed, processing and completed orders)"
+  "Product-wise sales on each marketplace (confirmed, shipped, delivered and completed orders)"
 );
-export const localSalesReport = salesRegister("LOCAL", "local-sales", "Local Sales Report", "Product-wise local sales (confirmed, processing and completed orders)");
+export const localSalesReport = salesRegister("LOCAL", "local-sales", "Local Sales Report", "Product-wise local sales (confirmed, shipped, delivered and completed orders)");
 export const distributorSalesReport = salesRegister(
   "DISTRIBUTOR",
   "distributor-sales",
   "Distributor Sales Report",
-  "Product-wise sales to each distributor (confirmed, processing and completed orders)"
+  "Product-wise sales to each distributor (confirmed, shipped, delivered and completed orders)"
 );

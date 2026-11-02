@@ -43,7 +43,7 @@ async function checkReference(input: PostPaymentInput): Promise<{ label: string;
     const party = order.customerName || order.channel?.name || "";
     if (direction === "RECEIVED") {
       if (!(SALE_STATUSES as string[]).includes(order.status)) {
-        throw new AppError("Payments can be received only for confirmed, processing or completed orders", 409);
+        throw new AppError("Payments can be received only for confirmed, shipped, delivered or completed orders", 409);
       }
       if (amountPaise > order.outstandingPaise) throw tooMuch("outstanding amount", order.outstandingPaise);
     } else {

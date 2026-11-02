@@ -87,8 +87,8 @@ export async function OrderEditPage({ params }: { params: IdParams }) {
   const { user, allowed } = await getPageAccess("order", "update");
   if (!allowed) return <AccessDenied />;
   const order = await orNotFound(getOrder((await params).id));
-  if (order.status !== "DRAFT") {
-    return <AccessDenied title="Order is not a draft" message={`${order.orderNo} is ${order.status.toLowerCase()} — only draft orders can be edited.`} />;
+  if (order.status !== "PENDING") {
+    return <AccessDenied title="Order is not pending" message={`${order.orderNo} is ${order.status.toLowerCase()} — only pending orders can be edited.`} />;
   }
   const options = await formOptions();
   // Keep the saved marketplace / distributor selectable even if since deactivated

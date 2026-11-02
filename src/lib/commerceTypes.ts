@@ -136,7 +136,7 @@ export const ORDER_TYPE_LABELS: Record<OrderType, string> = {
   DISTRIBUTOR: "Distributor",
 };
 
-export const ORDER_STATUSES = ["DRAFT", "CONFIRMED", "PROCESSING", "COMPLETED", "CANCELLED", "RETURNED"] as const;
+export const ORDER_STATUSES = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELLED", "RETURNED"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export const PAYMENT_STATUSES = ["UNPAID", "PARTIAL", "PAID", "REFUND_DUE"] as const;
@@ -190,6 +190,7 @@ export interface Order {
   courier?: string;
   trackingNumber?: string;
   shippedAt?: string;
+  deliveredAt?: string;
   notes?: string;
   history: OrderStatusEvent[];
   createdBy?: { _id: string; name: string } | null;
@@ -197,15 +198,21 @@ export interface Order {
   updatedAt?: string;
 }
 
-/** Statuses an order may move to from its current one. */
+/** Orders in these statuses count as sales (stock deducted, income booked). */
+export const SALE_STATUSES: OrderStatus[] = ["CONFIRMED", "SHIPPED", "DELIVERED", "COMPLETED"];
+
+/**
+ * Statuses the status dropdown offers from the current one. Moves are free between Pending and the sale
+ * statuses; the server applies the stock / income side effects (Pending → sale deducts stock; sale →
+ * Pending / Cancelled / Returned puts it back). A cancelled order can only be re-opened as Pending;
+ * Returned is final.
+ */
 export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  DRAFT: ["CONFIRMED", "CANCELLED"],
-  CONFIRMED: ["PROCESSING", "COMPLETED", "CANCELLED"],
-  PROCESSING: ["COMPLETED", "CANCELLED"],
-  COMPLETED: ["RETURNED"],
-  CANCELLED: [],
+  PENDING: ["CONFIRMED", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELLED"],
+  CONFIRMED: ["PENDING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELLED"],
+  SHIPPED: ["PENDING", "CONFIRMED", "DELIVERED", "COMPLETED", "CANCELLED", "RETURNED"],
+  DELIVERED: ["PENDING", "CONFIRMED", "SHIPPED", "COMPLETED", "CANCELLED", "RETURNED"],
+  COMPLETED: ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED", "RETURNED"],
+  CANCELLED: ["PENDING"],
   RETURNED: [],
 };
-
-/** Orders in these statuses count as sales (stock deducted, income booked). */
-export const SALE_STATUSES: OrderStatus[] = ["CONFIRMED", "PROCESSING", "COMPLETED"];

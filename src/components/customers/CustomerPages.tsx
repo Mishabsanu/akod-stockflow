@@ -104,7 +104,7 @@ export async function CustomerDetailPage({ params }: { params: IdParams }) {
                     </span>
                     <span className="text-right whitespace-nowrap">
                       <span className="block font-bold text-slate-800">{formatCurrency(o.total)}</span>
-                      {o.outstanding > 0 && o.status !== "DRAFT" && <span className="block text-[11px] text-rose-700">Due {formatCurrency(o.outstanding)}</span>}
+                      {o.outstanding > 0 && o.status !== "PENDING" && <span className="block text-[11px] text-rose-700">Due {formatCurrency(o.outstanding)}</span>}
                     </span>
                   </Link>
                 </li>

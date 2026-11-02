@@ -72,6 +72,7 @@ function toOrder(doc: PopulatedOrder): Order {
     courier: p.courier,
     trackingNumber: p.trackingNumber,
     shippedAt: p.shippedAt ? String(p.shippedAt) : undefined,
+    deliveredAt: p.deliveredAt ? String(p.deliveredAt) : undefined,
     notes: p.notes,
     history: p.history.map((h) => ({ status: h.status, at: String(h.at), by: h.by, note: h.note })),
     createdBy: p.createdBy ? { _id: String(p.createdBy._id), name: p.createdBy.name } : null,
@@ -80,7 +81,7 @@ function toOrder(doc: PopulatedOrder): Order {
   };
 }
 
-/** Draft-only extras the edit form needs. */
+/** Pending-only extras the edit form needs. */
 export type OrderRecord = Order & {
   upfrontPayment: number;
   upfrontPaymentMethod: string;
@@ -230,7 +231,7 @@ async function buildOrder(input: OrderInput) {
     taxPercent,
     taxPaise,
     totalPaise,
-    // Drafts: nothing is owed yet; settlement takes over once confirmed
+    // Pending: nothing is owed yet; settlement takes over once confirmed
     paidPaise: 0,
     outstandingPaise: totalPaise,
     paymentStatus: "UNPAID" as const,
@@ -243,7 +244,7 @@ async function buildOrder(input: OrderInput) {
 
 export interface SaveOrderResult {
   order: OrderRecord;
-  /** Set when "Save & Confirm" saved the draft but confirming failed (e.g. not enough stock) */
+  /** Set when "Save & Confirm" saved the order but confirming failed (e.g. not enough stock) */
   confirmError?: string;
 }
 
@@ -265,8 +266,8 @@ export async function createOrder(input: OrderInput, user: SessionUser): Promise
   const doc = await OrderModel.create({
     ...fields,
     orderNo: await nextCode("order", "ORD", 5),
-    status: "DRAFT",
-    history: [{ status: "DRAFT", at: new Date(), by: user.name, note: "Order created" }],
+    status: "PENDING",
+    history: [{ status: "PENDING", at: new Date(), by: user.name, note: "Order created" }],
     createdBy: user._id,
   });
   return maybeConfirm(String(doc._id), Boolean(input.confirm), user);
@@ -275,20 +276,20 @@ export async function createOrder(input: OrderInput, user: SessionUser): Promise
 export async function updateOrder(id: string, input: OrderInput, user: SessionUser): Promise<SaveOrderResult> {
   if (!isValidObjectId(id)) throw notFound("Order");
   const fields = await buildOrder(input);
-  const res = await OrderModel.updateOne({ _id: id, status: "DRAFT" }, { $set: fields }, { runValidators: true });
+  const res = await OrderModel.updateOne({ _id: id, status: "PENDING" }, { $set: fields }, { runValidators: true });
   if (!res.matchedCount) {
     if (!(await OrderModel.exists({ _id: id }))) throw notFound("Order");
-    throw new AppError("Only draft orders can be edited", 409);
+    throw new AppError("Only pending orders can be edited", 409);
   }
   return maybeConfirm(id, Boolean(input.confirm), user);
 }
 
 export async function deleteOrder(id: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Order");
-  const res = await OrderModel.deleteOne({ _id: id, status: "DRAFT" });
+  const res = await OrderModel.deleteOne({ _id: id, status: "PENDING" });
   if (!res.deletedCount) {
     if (!(await OrderModel.exists({ _id: id }))) throw notFound("Order");
-    throw new AppError("Only draft orders can be deleted. Cancel the order instead.", 409);
+    throw new AppError("Only pending orders can be deleted. Cancel the order instead.", 409);
   }
 }
 

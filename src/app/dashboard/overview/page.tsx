@@ -78,7 +78,7 @@ export default async function Page({ searchParams }: PageProps<"/dashboard/overv
         >
           <SalesTrendChart points={data.trend} />
         </Panel>
-        <Panel title="Order type distribution" subtitle="Sales value and orders (confirmed, processing, completed)">
+        <Panel title="Order type distribution" subtitle="Sales value and orders (confirmed, shipped, delivered, completed)">
           <BarList
             empty="No sales in this period yet"
             rows={data.byType.map((t) => ({
@@ -96,7 +96,7 @@ export default async function Page({ searchParams }: PageProps<"/dashboard/overv
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <Panel
           title="Top selling products"
-          subtitle="By units sold in the period (confirmed, processing, completed orders)"
+          subtitle="By units sold in the period (confirmed, shipped, delivered, completed orders)"
           href="/dashboard/reports/products"
           linkLabel="Report"
           className="xl:col-span-2"

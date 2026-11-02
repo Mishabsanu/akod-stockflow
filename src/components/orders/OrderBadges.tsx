@@ -3,9 +3,10 @@ import { ORDER_TYPE_LABELS, PAYMENT_STATUS_LABELS, type OrderStatus, type OrderT
 import { ORDER_STATUS_LABELS } from "./orderConfig";
 
 const STATUS_VARIANT: Record<OrderStatus, BadgeVariant> = {
-  DRAFT: "neutral",
+  PENDING: "neutral",
   CONFIRMED: "info",
-  PROCESSING: "warning",
+  SHIPPED: "warning",
+  DELIVERED: "brand",
   COMPLETED: "success",
   CANCELLED: "danger",
   RETURNED: "danger",
@@ -32,9 +33,9 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
   );
 }
 
-/** Drafts and cancelled orders with nothing paid show no payment badge (nothing is owed). */
+/** Pending and cancelled orders with nothing paid show no payment badge (nothing is owed). */
 export function PaymentStatusBadge({ status, orderStatus }: { status: PaymentStatus; orderStatus?: OrderStatus }) {
-  if (orderStatus === "DRAFT") return <span className="text-slate-400 text-[11px]">Not confirmed</span>;
+  if (orderStatus === "PENDING") return <span className="text-slate-400 text-[11px]">Not confirmed</span>;
   if ((orderStatus === "CANCELLED" || orderStatus === "RETURNED") && status === "UNPAID") {
     return <span className="text-slate-400 text-[11px]">—</span>;
   }

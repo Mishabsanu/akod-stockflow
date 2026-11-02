@@ -129,9 +129,10 @@ export function BarList({
 }
 
 export const ORDER_STATUS_TONE: Record<OrderStatus, BadgeVariant> = {
-  DRAFT: "neutral",
+  PENDING: "neutral",
   CONFIRMED: "info",
-  PROCESSING: "brand",
+  SHIPPED: "brand",
+  DELIVERED: "info",
   COMPLETED: "success",
   CANCELLED: "danger",
   RETURNED: "warning",
@@ -159,7 +160,7 @@ export function RecentOrders({ orders }: { orders: DashboardData["recentOrders"]
               <span className="block text-[12.5px] font-bold text-slate-900 tabular-nums">{formatCurrency(o.total)}</span>
               <span className="flex gap-1 justify-end mt-0.5">
                 <Badge variant={ORDER_STATUS_TONE[o.status]}>{titleCase(o.status)}</Badge>
-                {o.status !== "DRAFT" && o.status !== "CANCELLED" && (
+                {o.status !== "PENDING" && o.status !== "CANCELLED" && (
                   <span className="hidden sm:inline text-[10px] text-slate-500 self-center">{PAYMENT_STATUS_LABELS[o.paymentStatus]}</span>
                 )}
               </span>

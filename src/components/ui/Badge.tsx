@@ -49,9 +49,9 @@ const STATUS_VARIANTS: Record<string, BadgeVariant> = {
   active: "success",
   inactive: "neutral",
   // Orders
-  DRAFT: "neutral",
   CONFIRMED: "info",
-  PROCESSING: "warning",
+  SHIPPED: "warning",
+  DELIVERED: "brand",
   COMPLETED: "success",
   CANCELLED: "neutral",
   RETURNED: "danger",

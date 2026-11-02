@@ -58,7 +58,7 @@ export function OrderPayments({ order, payments, accounts, canPay }: OrderPaymen
 
       {payments.length === 0 ? (
         <p className="p-4 text-xs text-slate-500">
-          {order.status === "DRAFT" ? "Payments can be recorded once the order is confirmed." : "No payments recorded yet."}
+          {order.status === "PENDING" ? "Payments can be recorded once the order is confirmed." : "No payments recorded yet."}
         </p>
       ) : (
         <ul className="divide-y divide-slate-100 text-xs">

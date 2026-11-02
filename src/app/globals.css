@@ -17,8 +17,8 @@
   --color-canvas: #f8fafc;
   --color-head: #f9fafb;
 
-  --font-sans: var(--font-jakarta), var(--font-inter), "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: var(--font-mono-face), "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
   --animate-fade-in: fade-in 0.18s ease-out;
   --animate-slide-left: slide-left 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;

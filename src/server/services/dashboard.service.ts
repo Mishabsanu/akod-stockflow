@@ -41,7 +41,7 @@ export interface DashboardData {
   trend: TrendPoint[];
   byType: { type: OrderType; label: string; count: number; value: number }[];
   byChannel: { _id: string; name: string; count: number; units: number; value: number }[];
-  /** Best sellers in the period by units sold (confirmed / processing / completed orders) */
+  /** Best sellers in the period by units sold (confirmed / shipped / delivered / completed orders) */
   topProducts: { _id: string; sku: string; name: string; units: number; value: number; orders: number }[];
   recentOrders: {
     _id: string;

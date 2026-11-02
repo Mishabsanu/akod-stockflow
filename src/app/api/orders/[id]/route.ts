@@ -4,12 +4,12 @@ import { deleteOrder, getOrder, updateOrder } from "@/server/services/order.serv
 
 export const GET = apiHandler<{ id: string }>({ module: "order", action: "view" }, async ({ params }) => getOrder(params.id));
 
-/** Drafts only. */
+/** Pending orders only. */
 export const PUT = apiHandler<{ id: string }>({ module: "order", action: "update" }, async ({ req, params, user }) =>
   updateOrder(params.id, await readBody(req, orderSchema), user)
 );
 
-/** Drafts only — confirmed orders are cancelled instead. */
+/** Pending orders only — confirmed orders are cancelled instead. */
 export const DELETE = apiHandler<{ id: string }>({ module: "order", action: "delete" }, async ({ params }) => {
   await deleteOrder(params.id);
   return { success: true };

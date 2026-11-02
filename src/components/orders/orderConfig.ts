@@ -1,4 +1,4 @@
-import type { OrderStatus, OrderType, PaymentStatus } from "@/lib/commerceTypes";
+import { SALE_STATUSES, type OrderStatus, type OrderType, type PaymentStatus } from "@/lib/commerceTypes";
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "@/lib/financeTypes";
 import type { Option } from "@/lib/types";
 
@@ -17,9 +17,10 @@ export const ORDER_LIST_PAGES: Record<"all" | OrderType, { title: string; descri
 };
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  DRAFT: "Draft",
+  PENDING: "Pending",
   CONFIRMED: "Confirmed",
-  PROCESSING: "Processing",
+  SHIPPED: "Shipped",
+  DELIVERED: "Delivered",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
   RETURNED: "Returned",
@@ -39,24 +40,31 @@ export const PAYMENT_METHOD_OPTIONS: Option[] = PAYMENT_METHODS.map((m) => ({ va
 
 export const TAX_PRESETS = [0, 5, 12, 18];
 
-/** Action button text for each target status. */
-export const STATUS_ACTIONS: Record<OrderStatus, { label: string; confirm: string; variant: "primary" | "outline" | "danger" }> = {
-  DRAFT: { label: "Draft", confirm: "", variant: "outline" },
-  CONFIRMED: {
-    label: "Confirm Order",
-    confirm: "Stock will be checked and deducted, and the sale is booked in income.",
-    variant: "primary",
-  },
-  PROCESSING: { label: "Mark Processing", confirm: "Mark this order as being packed / shipped.", variant: "outline" },
-  COMPLETED: { label: "Complete", confirm: "Mark this order as delivered and completed.", variant: "primary" },
-  CANCELLED: {
-    label: "Cancel Order",
-    confirm: "Stock from this order goes back to inventory and the income is reversed (if it was confirmed).",
-    variant: "danger",
-  },
-  RETURNED: {
-    label: "Mark Returned",
-    confirm: "Returned items go back to inventory and the income is reversed. Record a refund afterwards if money was received.",
-    variant: "danger",
-  },
-};
+/** What a status change does, shown in the confirm dialog. */
+export function statusChangeEffect(from: OrderStatus, to: OrderStatus): { text: string; tone: "primary" | "danger" } {
+  const isSale = (s: OrderStatus) => (SALE_STATUSES as OrderStatus[]).includes(s);
+  if (to === "CANCELLED") {
+    return {
+      text: isSale(from)
+        ? "Stock from this order goes back to inventory and the income is reversed. Record a refund afterwards if money was received."
+        : "The order is cancelled. No stock was deducted yet.",
+      tone: "danger",
+    };
+  }
+  if (to === "RETURNED") {
+    return { text: "Returned items go back to inventory and the income is reversed. Record a refund afterwards if money was received.", tone: "danger" };
+  }
+  if (to === "PENDING") {
+    return {
+      text: isSale(from)
+        ? "Stock goes back to inventory and the income is reversed. The order becomes editable again."
+        : "The order is re-opened as Pending. Nothing is deducted until it is confirmed.",
+      tone: "danger",
+    };
+  }
+  if (!isSale(from)) return { text: "Stock is checked and deducted now, and the sale is booked in income.", tone: "primary" };
+  if (to === "SHIPPED") return { text: "Add the courier and tracking number if you have them.", tone: "primary" };
+  if (to === "DELIVERED") return { text: "The order is marked as delivered to the customer.", tone: "primary" };
+  if (to === "COMPLETED") return { text: "The order is marked as completed.", tone: "primary" };
+  return { text: "The order status is updated. Stock and income are not affected.", tone: "primary" };
+}

@@ -67,7 +67,7 @@ export function OrderListView({ data, channels, fixedType }: OrderListViewProps)
         label: "Outstanding",
         align: "right",
         render: (o) =>
-          o.outstanding > 0 && o.status !== "DRAFT" ? (
+          o.outstanding > 0 && o.status !== "PENDING" ? (
             <span className="font-semibold text-rose-700">{formatCurrency(o.outstanding)}</span>
           ) : (
             <span className="text-slate-400">—</span>
@@ -129,8 +129,8 @@ export function OrderListView({ data, channels, fixedType }: OrderListViewProps)
           entityLabel={ORDER_UI.label}
           itemName={o.orderNo}
           viewHref={`${ORDER_UI.basePath}/${o._id}`}
-          editHref={canEdit && o.status === "DRAFT" ? `${ORDER_UI.basePath}/${o._id}/edit` : undefined}
-          deleteUrl={canDelete && o.status === "DRAFT" ? `${ORDER_UI.apiBase}/${o._id}` : undefined}
+          editHref={canEdit && o.status === "PENDING" ? `${ORDER_UI.basePath}/${o._id}/edit` : undefined}
+          deleteUrl={canDelete && o.status === "PENDING" ? `${ORDER_UI.apiBase}/${o._id}` : undefined}
         />
       )}
     />

@@ -109,10 +109,10 @@ export function OrderForm({ initial, channels, distributors: initialDistributors
         ? await apiRequest<SaveOrderResult>(`${ORDER_UI.apiBase}/${initial._id}`, "PUT", body)
         : await apiRequest<SaveOrderResult>(ORDER_UI.apiBase, "POST", body);
       if (res.confirmError) {
-        toast.warning(`Saved as draft ${res.order.orderNo}, but not confirmed: ${res.confirmError}`, { duration: 8000 });
+        toast.warning(`Saved ${res.order.orderNo} as Pending, but not confirmed: ${res.confirmError}`, { duration: 8000 });
       } else {
         toast.success(
-          res.order.status === "CONFIRMED" ? `Order ${res.order.orderNo} confirmed — stock deducted` : `Draft ${res.order.orderNo} saved`
+          res.order.status === "CONFIRMED" ? `Order ${res.order.orderNo} confirmed — stock deducted` : `Order ${res.order.orderNo} saved as Pending`
         );
       }
       router.push(`${ORDER_UI.basePath}/${res.order._id}`);
@@ -194,7 +194,7 @@ function OrderFormBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
-  /** Quantities above available stock block "Save & Confirm" (drafts may be saved). */
+  /** Quantities above available stock block "Save & Confirm" (pending orders may be saved). */
   const stockErrors = (): FormikErrors<OrderInput> | null => {
     const totals = new Map<string, number>();
     values.items.forEach((i) => i.product && totals.set(i.product, (totals.get(i.product) ?? 0) + (Number(i.quantity) || 0)));
@@ -213,7 +213,7 @@ function OrderFormBody({
         const schemaErrors = await validateForm();
         setErrors({ ...schemaErrors, ...errs });
         (errs.items as unknown[]).forEach((e, i) => e && setFieldTouched(`items.${i}.quantity`, true, false));
-        toast.error("Some quantities are more than the stock available. Lower them or save as draft.");
+        toast.error("Some quantities are more than the stock available. Lower them or save as Pending.");
         return;
       }
     }
@@ -248,7 +248,7 @@ function OrderFormBody({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base font-bold text-slate-900">{isEdit ? "Edit Draft Order" : "Create Order"}</h1>
+              <h1 className="text-base font-bold text-slate-900">{isEdit ? "Edit Pending Order" : "Create Order"}</h1>
               <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-mono">
                 {initial?.orderNo ?? "New"}
               </span>
@@ -346,7 +346,7 @@ function OrderFormBody({
             className="px-4 py-2 bg-white border border-brand-border text-brand hover:bg-brand-light text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
-            Save as Draft
+            Save as Pending
           </button>
           {canConfirm && (
             <button

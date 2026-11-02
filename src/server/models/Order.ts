@@ -50,6 +50,7 @@ export interface OrderDoc {
   courier?: string;
   trackingNumber?: string;
   shippedAt?: Date | null;
+  deliveredAt?: Date | null;
   notes?: string;
   history: OrderStatusEventDoc[];
   confirmedAt?: Date | null;
@@ -101,13 +102,14 @@ const OrderSchema = new Schema<OrderDoc>(
     paidPaise: { type: Number, default: 0 },
     outstandingPaise: { type: Number, default: 0, min: 0 },
     paymentStatus: { type: String, enum: PAYMENT_STATUSES, default: "UNPAID", index: true },
-    status: { type: String, enum: ORDER_STATUSES, default: "DRAFT", index: true },
+    status: { type: String, enum: ORDER_STATUSES, default: "PENDING", index: true },
     upfrontPaymentPaise: { type: Number, default: 0, min: 0 },
     upfrontPaymentMethod: { type: String, enum: [...PAYMENT_METHODS, ""], default: "" },
     upfrontPaymentRef: { type: String, trim: true, default: "" },
     courier: { type: String, trim: true, default: "" },
     trackingNumber: { type: String, trim: true, default: "" },
     shippedAt: { type: Date, default: null },
+    deliveredAt: { type: Date, default: null },
     notes: { type: String, trim: true, default: "" },
     history: { type: [HistorySchema], default: [] },
     confirmedAt: { type: Date, default: null },

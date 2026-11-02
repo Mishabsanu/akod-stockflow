@@ -1,6 +1,6 @@
 import "server-only";
 import { isValidObjectId, type Types } from "mongoose";
-import { ORDER_TRANSITIONS, type OrderStatus, type OrderType } from "@/lib/commerceTypes";
+import { ORDER_TRANSITIONS, SALE_STATUSES, type OrderStatus, type OrderType } from "@/lib/commerceTypes";
 import type { IncomeCategory } from "@/lib/financeTypes";
 import { todayIST } from "@/lib/indiaDate";
 import type { SessionUser } from "@/lib/types";
@@ -86,12 +86,22 @@ async function rollback(moves: { product: Types.ObjectId; qty: number; txnId: Ty
   }
 }
 
-/** DRAFT → CONFIRMED: validate stock, deduct it, book the income, post any upfront payment. */
-export async function confirmOrder(id: string, user: SessionUser, note = ""): Promise<void> {
+/**
+ * PENDING → a sale status (Confirmed by default; Shipped / Delivered / Completed when the order is
+ * moved straight there): validate stock, deduct it, book the income, post any upfront payment once.
+ */
+export async function confirmOrder(
+  id: string,
+  user: SessionUser,
+  note = "",
+  to: OrderStatus = "CONFIRMED",
+  extra: Record<string, unknown> = {}
+): Promise<void> {
   const order = await loadOrder(id);
-  if (order.status !== "DRAFT") throw new AppError("Only draft orders can be confirmed", 409);
+  if (order.status !== "PENDING") throw new AppError("Only pending orders can be confirmed", 409);
+  if (!isSale(to)) throw new AppError("Invalid status", 422);
   await checkSellable(order);
-  await claim(order, "CONFIRMED", user, note, { confirmedAt: new Date() });
+  await claim(order, to, user, note, { confirmedAt: new Date(), ...extra });
 
   const done: { product: Types.ObjectId; qty: number; txnId: Types.ObjectId }[] = [];
   try {
@@ -113,7 +123,7 @@ export async function confirmOrder(id: string, user: SessionUser, note = ""): Pr
     await rollback(done);
     await Order.updateOne(
       { _id: order._id },
-      { $set: { status: "DRAFT", confirmedAt: null }, $pop: { history: 1 } }
+      { $set: { status: "PENDING", confirmedAt: null, ...Object.fromEntries(Object.keys(extra).map((k) => [k, order[k as keyof OrderDoc] ?? null])) }, $pop: { history: 1 } }
     );
     throw error;
   }
@@ -144,6 +154,8 @@ export async function confirmOrder(id: string, user: SessionUser, note = ""): Pr
       notes: "Paid with the order",
       userId: user._id,
     });
+    // Posted once: re-confirming after a move back to Pending must not take the payment again
+    await Order.updateOne({ _id: order._id }, { $set: { upfrontPaymentPaise: 0 } });
   }
 }
 
@@ -169,49 +181,75 @@ async function reverseSale(order: OrderDoc, kind: "ORDER_CANCEL" | "ORDER_RETURN
   );
 }
 
-/** Any allowed status move (see ORDER_TRANSITIONS). */
+const isSale = (s: OrderStatus) => (SALE_STATUSES as OrderStatus[]).includes(s);
+
+/** Courier / tracking / delivered-time fields that go with a move to `to`. */
+function shipmentFields(order: OrderDoc, to: OrderStatus, input: StatusChangeInput): Record<string, unknown> {
+  const set: Record<string, unknown> = {};
+  if (input.courier !== undefined) set.courier = input.courier.trim();
+  if (input.trackingNumber !== undefined) set.trackingNumber = input.trackingNumber.trim();
+  if ((to === "SHIPPED" || to === "DELIVERED" || to === "COMPLETED") && !order.shippedAt) set.shippedAt = new Date();
+  if ((to === "DELIVERED" || to === "COMPLETED") && !order.deliveredAt) set.deliveredAt = new Date();
+  return set;
+}
+
+function blockIfPaid(order: OrderDoc, what: string) {
+  if (order.paidPaise > 0) {
+    throw new AppError(`Money has been received on this order. Record a refund (or cancel the order) before moving it back to ${what}.`, 409);
+  }
+}
+
+/**
+ * Any allowed status move (see ORDER_TRANSITIONS), with its stock / income side effects:
+ * Pending → sale status deducts stock + books income; sale → Pending / Cancelled / Returned puts
+ * the stock back + reverses the income; moves between sale statuses only change the status.
+ */
 export async function changeOrderStatus(id: string, input: StatusChangeInput, user: SessionUser): Promise<void> {
   const order = await loadOrder(id);
   const to = input.status;
+  if (to === order.status) return;
   if (!ORDER_TRANSITIONS[order.status].includes(to)) {
     throw new AppError(`An order that is ${order.status.toLowerCase()} cannot be moved to ${to.toLowerCase()}`, 409);
   }
   const note = input.note?.trim() ?? "";
+  const from = order.status;
 
-  if (to === "CONFIRMED") return confirmOrder(id, user, note);
+  if (from === "PENDING" && isSale(to)) return confirmOrder(id, user, note, to, shipmentFields(order, to, input));
 
-  if (to === "CANCELLED") {
+  if (from === "CANCELLED") {
+    // Only back to Pending (re-open); nothing was deducted while cancelled
+    blockIfPaid(order, "Pending");
+    await claim(order, "PENDING", user, note || "Order re-opened", { confirmedAt: null });
+  } else if (to === "CANCELLED") {
     await claim(order, "CANCELLED", user, note);
-    if (order.status !== "DRAFT") await reverseSale(order, "ORDER_CANCEL", user, note || "Order cancelled");
+    if (isSale(from)) await reverseSale(order, "ORDER_CANCEL", user, note || "Order cancelled");
   } else if (to === "RETURNED") {
     await claim(order, "RETURNED", user, note);
     await reverseSale(order, "ORDER_RETURN", user, note || "Order returned");
+  } else if (to === "PENDING") {
+    blockIfPaid(order, "Pending");
+    await claim(order, "PENDING", user, note || "Moved back to pending", { confirmedAt: null });
+    await reverseSale(order, "ORDER_CANCEL", user, note || "Moved back to pending");
   } else {
-    const shipment: Record<string, unknown> = {};
-    if (input.courier !== undefined) shipment.courier = input.courier.trim();
-    if (input.trackingNumber !== undefined) {
-      shipment.trackingNumber = input.trackingNumber.trim();
-      if (input.trackingNumber.trim() && !order.shippedAt) shipment.shippedAt = new Date();
-    }
-    await claim(order, to, user, note, shipment);
+    await claim(order, to, user, note, shipmentFields(order, to, input));
   }
   await recomputeOrder(order._id);
 }
 
 /**
  * Saves courier / tracking number. Adding a tracking number to a confirmed order moves it to
- * Processing (shipped), as the user asked: "once tracking is updated, update the status".
+ * Shipped, as the user asked: "once tracking is updated, update the status".
  */
 export async function updateShipment(id: string, input: { courier: string; trackingNumber: string }, user: SessionUser) {
   const order = await loadOrder(id);
-  if (!["CONFIRMED", "PROCESSING", "COMPLETED"].includes(order.status)) {
-    throw new AppError("Tracking can be added only to confirmed, processing or completed orders", 409);
+  if (!isSale(order.status)) {
+    throw new AppError("Tracking can be added only to confirmed, shipped, delivered or completed orders", 409);
   }
   const trackingNumber = input.trackingNumber.trim();
   const set: Record<string, unknown> = { courier: input.courier.trim(), trackingNumber };
   if (trackingNumber && !order.shippedAt) set.shippedAt = new Date();
   if (order.status === "CONFIRMED" && trackingNumber) {
-    await claim(order, "PROCESSING", user, `Shipped${set.courier ? ` via ${set.courier}` : ""} — tracking ${trackingNumber}`, set);
+    await claim(order, "SHIPPED", user, `Shipped${set.courier ? ` via ${set.courier}` : ""} — tracking ${trackingNumber}`, set);
   } else {
     await Order.updateOne({ _id: order._id }, { $set: set });
   }

@@ -11,9 +11,9 @@ import { formatDateTime } from "@/lib/format";
 import { ApiError, apiRequest } from "@/services/apiClient";
 import { ORDER_UI } from "./orderConfig";
 
-const EDITABLE = ["CONFIRMED", "PROCESSING", "COMPLETED"];
+const EDITABLE = ["CONFIRMED", "SHIPPED", "DELIVERED", "COMPLETED"];
 
-/** Courier + tracking number. Saving a tracking number on a confirmed order marks it Processing. */
+/** Courier + tracking number. Saving a tracking number on a confirmed order marks it Shipped. */
 export function ShipmentCard({ order, canEdit }: { order: Order; canEdit: boolean }) {
   const router = useRouter();
   const [courier, setCourier] = useState(order.courier ?? "");
@@ -30,7 +30,7 @@ export function ShipmentCard({ order, canEdit }: { order: Order; canEdit: boolea
         trackingNumber: tracking.trim(),
       });
       toast.success(
-        updated.status !== order.status ? "Tracking saved — order moved to Processing" : "Shipment details saved"
+        updated.status !== order.status ? "Tracking saved — order moved to Shipped" : "Shipment details saved"
       );
       router.refresh();
     } catch (error) {
@@ -61,7 +61,7 @@ export function ShipmentCard({ order, canEdit }: { order: Order; canEdit: boolea
             </div>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <p className="text-[11px] text-slate-500">
-                {order.status === "CONFIRMED" ? "Adding a tracking number moves the order to Processing." : order.shippedAt ? `Shipped ${formatDateTime(order.shippedAt)}` : ""}
+                {order.status === "CONFIRMED" ? "Adding a tracking number moves the order to Shipped." : order.shippedAt ? `Shipped ${formatDateTime(order.shippedAt)}` : ""}
               </p>
               <Button size="sm" onClick={save} loading={busy} disabled={!dirty}>
                 Save Tracking
@@ -80,7 +80,7 @@ export function ShipmentCard({ order, canEdit }: { order: Order; canEdit: boolea
             </div>
           </dl>
         ) : (
-          <p className="text-slate-500">{order.status === "DRAFT" ? "Tracking can be added once the order is confirmed." : "No tracking recorded."}</p>
+          <p className="text-slate-500">{order.status === "PENDING" ? "Tracking can be added once the order is confirmed." : "No tracking recorded."}</p>
         )}
       </div>
     </section>
