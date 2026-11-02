@@ -1,6 +1,6 @@
 import { ArrowDownLeft, ArrowUpRight, Banknote, HandCoins, IndianRupee, Receipt, Scale, TrendingUp, Wallet, Waves } from "lucide-react";
 import { BarList, KpiGrid, Panel, type Kpi } from "@/components/dashboard/DashboardParts";
-import { CashFlowChart, RevenueExpenseChart } from "@/components/finance/dashboard/FinanceCharts";
+import { CashFlowChart, RevenueExpenseChart } from "@/components/charts/LazyCharts";
 import { PeriodFilter } from "@/components/reports/PeriodFilter";
 import { SERIES } from "@/components/reports/chartTheme";
 import { AccessDenied } from "@/components/ui/AccessDenied";

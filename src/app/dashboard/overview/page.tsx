@@ -1,7 +1,7 @@
 import { AlertTriangle, Boxes, ClipboardList, HandCoins, IndianRupee, Package, Receipt, ShoppingCart, TrendingUp, Wallet } from "lucide-react";
 import { BarList, BuildProgressCard, KpiGrid, Panel, RecentOrders, RecentStock, TopProducts, type Kpi } from "@/components/dashboard/DashboardParts";
 import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
-import { SalesTrendChart } from "@/components/dashboard/SalesTrendChart";
+import { SalesTrendChart } from "@/components/charts/LazyCharts";
 import { ORDER_TYPE_COLOR } from "@/components/reports/chartTheme";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ORDER_TYPE_LABELS, ORDER_TYPES, type OrderType } from "@/lib/commerceTypes";

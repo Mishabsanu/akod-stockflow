@@ -4,7 +4,7 @@ import type { AnyObject, ObjectSchema } from "yup";
 import { can, type PermissionAction, type PermissionModule } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/types";
 import { connectDB } from "../db";
-import { loadSessionUser } from "../auth/session";
+import { invalidateSessionCache, loadSessionUser } from "../auth/session";
 import { SESSION_COOKIE } from "../auth/token";
 import { AppError, errorResponse } from "./errors";
 
@@ -43,6 +43,10 @@ export function apiHandler<P = Record<string, never>>(
       }
       const params = ((await ctx?.params) ?? {}) as P;
       const result = await handler({ req, user, params });
+      // A user or role was changed: drop cached sessions so new permissions apply on the next click
+      if (req.method !== "GET" && guard !== "authenticated" && (guard.module === "user" || guard.module === "role")) {
+        invalidateSessionCache();
+      }
       return result instanceof NextResponse ? result : NextResponse.json(result ?? { success: true });
     } catch (error) {
       return errorResponse(error);

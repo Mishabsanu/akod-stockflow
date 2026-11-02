@@ -24,7 +24,6 @@ export function MobileBottomNav({ modules, onOpenMenu }: { modules: NavModule[];
             <Link
               key={mod.id}
               href={mod.items[0].href}
-              prefetch={false}
               className={`flex flex-col items-center justify-center gap-1 text-[10.5px] font-semibold relative ${
                 active ? "text-brand" : "text-slate-500 hover:text-slate-800"
               }`}

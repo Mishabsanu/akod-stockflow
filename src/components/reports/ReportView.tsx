@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { formatDay } from "@/lib/indiaDate";
 import type { ReportColumn, ReportResult, ReportRow, ReportSummaryItem } from "@/lib/reportTypes";
-import { ReportChart } from "./ReportChart";
+import { ReportChart } from "@/components/charts/LazyCharts";
 
 function renderCell(col: ReportColumn, row: ReportRow): ReactNode {
   const v = row[col.key];

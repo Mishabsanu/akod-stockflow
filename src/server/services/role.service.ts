@@ -1,4 +1,5 @@
 import "server-only";
+import { invalidateSessionCache } from "../auth/session";
 import { isValidObjectId, type Types } from "mongoose";
 import {
   normalizePermissions,
@@ -103,6 +104,7 @@ export async function createRole(input: RoleInput, userId: string): Promise<Role
 }
 
 export async function updateRole(id: string, input: RoleInput): Promise<Role> {
+  invalidateSessionCache();
   const existing = await findRole(id);
   const update: Record<string, unknown> = {
     name: input.name,
@@ -131,6 +133,7 @@ export async function updateRole(id: string, input: RoleInput): Promise<Role> {
 }
 
 export async function deleteRole(id: string): Promise<void> {
+  invalidateSessionCache();
   const existing = await findRole(id);
   if (existing.isSuperAdmin) {
     throw new AppError("The Super Admin role cannot be deleted.", 409);

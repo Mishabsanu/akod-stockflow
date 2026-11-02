@@ -1,4 +1,5 @@
 import "server-only";
+import { invalidateSessionCache } from "../auth/session";
 import { isValidObjectId, Types } from "mongoose";
 import type { Option, Paginated, SessionUser, User } from "@/lib/types";
 import type { UserInput } from "@/lib/validation/user.schema";
@@ -88,6 +89,7 @@ export async function createUser(input: UserInput, userId: string): Promise<User
 }
 
 export async function updateUser(id: string, input: UserUpdateInput, actor: SessionUser): Promise<UserRecord> {
+  invalidateSessionCache();
   if (!isValidObjectId(id)) throw notFound("User");
   const existing = await UserModel.findById(id).select("role status").lean();
   if (!existing) throw notFound("User");
@@ -132,6 +134,7 @@ export async function updateUser(id: string, input: UserUpdateInput, actor: Sess
 }
 
 export async function deleteUser(id: string, actor: SessionUser): Promise<void> {
+  invalidateSessionCache();
   if (!isValidObjectId(id)) throw notFound("User");
   if (id === actor._id) throw new AppError("You cannot delete your own account.", 409);
   const existing = await UserModel.findById(id).select("role status").lean();
