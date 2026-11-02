@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* AKOD Commerce design tokens — same palette as Proserve ERP */
+@theme {
+  --color-brand: #5439a3;
+  --color-brand-dark: #432a87;
+  --color-brand-light: #f3effc;
+  --color-brand-border: #d8b4fe;
+
+  --color-rail: #0c1b2a;
+  --color-rail-header: #08121d;
+  --color-rail-hover: #112438;
+  --color-rail-active: #183654;
+  --color-rail-border: #15273b;
+
+  --color-line: #e5e7eb;
+  --color-canvas: #f8fafc;
+  --color-head: #f9fafb;
+
+  --font-sans: var(--font-jakarta), var(--font-inter), "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-mono-face), "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --animate-fade-in: fade-in 0.18s ease-out;
+  --animate-slide-left: slide-left 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slide-left {
+    from { transform: translateX(100%); opacity: 0.8; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--color-canvas);
+    color: #0f172a;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
+    letter-spacing: -0.012em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* iOS Safari zooms the page into any focused field under 16px — keep phones at 16px. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
