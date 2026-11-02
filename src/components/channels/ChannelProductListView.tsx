@@ -27,7 +27,7 @@ function ListingModal({ channelId, row, onClose }: { channelId: string; row: Cha
   if (!row) return null;
   return (
     <Formik<ChannelProductInput>
-      initialValues={{ channelSku: row.channelSku ?? "", channelPrice: row.channelPrice }}
+      initialValues={{ channelSku: row.channelSku ?? "", channelPrice: row.channelPrice, allocatedQty: row.allocatedQty }}
       validationSchema={channelProductSchema}
       onSubmit={async (values, helpers) => {
         try {
@@ -72,6 +72,16 @@ function ListingModal({ channelId, row, onClose }: { channelId: string; row: Cha
               step="0.01"
               inputMode="decimal"
               hint={`0 = selling price ${formatCurrency(row.product.sellingPrice)}`}
+            />
+            <TextField
+              name="allocatedQty"
+              label="Assigned Qty"
+              type="number"
+              min={row.soldQty}
+              step={1}
+              inputMode="numeric"
+              placeholder="No limit"
+              hint={`Most this marketplace may sell. Sold here: ${formatNumber(row.soldQty)} · in stock: ${formatNumber(row.stock ?? 0)}. Leave blank for no limit.`}
             />
           </Form>
         </Modal>
@@ -130,8 +140,28 @@ export function ChannelProductListView({ channelId, data, categories }: { channe
           ),
       },
       {
+        key: "allocatedQty",
+        label: "Assigned",
+        align: "right",
+        render: (r) => (r.allocatedQty === null ? <span className="text-slate-400" title="No limit">No limit</span> : <b>{formatNumber(r.allocatedQty)}</b>),
+      },
+      { key: "soldQty", label: "Sold", align: "right", render: (r) => formatNumber(r.soldQty) },
+      {
+        key: "remainingQty",
+        label: "Remaining",
+        align: "right",
+        render: (r) =>
+          r.remainingQty === null ? (
+            <span className="text-slate-400">—</span>
+          ) : (
+            <span className={`font-bold ${r.remainingQty === 0 ? "text-rose-600" : r.remainingQty <= 5 ? "text-amber-600" : "text-emerald-700"}`}>
+              {formatNumber(r.remainingQty)}
+            </span>
+          ),
+      },
+      {
         key: "stock",
-        label: "Stock",
+        label: "Central Stock",
         align: "right",
         render: (r) => <span className={`font-bold ${(r.stock ?? 0) > 0 ? "text-slate-900" : "text-rose-600"}`}>{formatNumber(r.stock ?? 0)}</span>,
       },

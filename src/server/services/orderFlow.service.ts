@@ -1,4 +1,5 @@
 import "server-only";
+import { assertWithinAllocation } from "./channelAllocation";
 import { isValidObjectId, type Types } from "mongoose";
 import { ORDER_TRANSITIONS, SALE_STATUSES, type OrderStatus, type OrderType } from "@/lib/commerceTypes";
 import type { IncomeCategory } from "@/lib/financeTypes";
@@ -76,6 +77,7 @@ async function checkSellable(order: OrderDoc): Promise<void> {
     .filter(([id, n]) => (have.get(id) ?? 0) < n.qty)
     .map(([id, n]) => `${n.sku} (need ${n.qty}, have ${have.get(id) ?? 0})`);
   if (short.length) throw new AppError(`Not enough stock: ${short.join(", ")}`, 409);
+  if (order.orderType === "MARKETPLACE" && order.channel) await assertWithinAllocation(order.channel, need);
 }
 
 /** Undo deductions made so far when a later line fails (no history rows left behind). */

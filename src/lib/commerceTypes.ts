@@ -99,6 +99,12 @@ export interface ChannelProduct {
   channelSku?: string;
   /** Price on this marketplace; 0 = use the product selling price */
   channelPrice: number;
+  /** Most this marketplace may sell; null = no limit */
+  allocatedQty: number | null;
+  /** Units sold here (confirmed / shipped / delivered / completed orders) */
+  soldQty: number;
+  /** Assigned − sold; null = no limit */
+  remainingQty: number | null;
   stock?: number;
   createdAt?: string;
 }

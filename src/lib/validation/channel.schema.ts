@@ -20,7 +20,23 @@ const ids = Yup.array(Yup.string().required().matches(/^[a-f0-9]{24}$/i, "Invali
   .required()
   .default([]);
 
-export const assignProductsSchema = Yup.object({ productIds: ids });
+/** Optional assigned qty: blank = no limit. */
+export const allocatedQtyField = Yup.number()
+  .transform((v, o) => (o === "" || o === null || o === undefined ? null : v))
+  .nullable()
+  .typeError("Assigned qty must be a number")
+  .integer("Assigned qty must be a whole number")
+  .min(0, "Assigned qty cannot be negative")
+  .max(10000000, "Assigned qty is too large")
+  .default(null);
+
+export const assignProductsSchema = Yup.object({
+  productIds: ids,
+  /** Assigned qty per product id (missing = no limit) */
+  allocations: Yup.array(
+    Yup.object({ product: Yup.string().required().matches(/^[a-f0-9]{24}$/i, "Invalid product"), allocatedQty: allocatedQtyField })
+  ).default([]),
+});
 
 export const removeChannelProductsSchema = Yup.object({
   ids: Yup.array(Yup.string().required().matches(/^[a-f0-9]{24}$/i, "Invalid id")).min(1, "Select at least one product").required().default([]),
@@ -30,6 +46,7 @@ export const removeChannelProductsSchema = Yup.object({
 export const channelProductSchema = Yup.object({
   channelSku: optionalText("Marketplace SKU", 60),
   channelPrice: rupees("Marketplace price"),
+  allocatedQty: allocatedQtyField,
 });
 
 export type ChannelProductInput = Yup.InferType<typeof channelProductSchema>;

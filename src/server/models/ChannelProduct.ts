@@ -9,6 +9,8 @@ export interface ChannelProductDoc {
   channelSku?: string;
   /** 0 = use the product selling price */
   channelPricePaise: number;
+  /** Most this marketplace may sell (null = no limit). Sold is derived from its orders. */
+  allocatedQty?: number | null;
   createdBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -20,6 +22,7 @@ const ChannelProductSchema = new Schema<ChannelProductDoc>(
     product: { type: Schema.Types.ObjectId, ref: "Product", required: true, index: true },
     channelSku: { type: String, trim: true, default: "" },
     channelPricePaise: { type: Number, default: 0, min: 0 },
+    allocatedQty: { type: Number, default: null, min: 0 },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }

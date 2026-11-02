@@ -1,4 +1,5 @@
 import "server-only";
+import { sellableOnChannel } from "./channelAllocation";
 import { isValidObjectId, Types } from "mongoose";
 import { ORDER_STATUSES, ORDER_TYPES, PAYMENT_STATUSES, type Order, type OrderType } from "@/lib/commerceTypes";
 import type { Payment as PaymentRow } from "@/lib/financeTypes";
@@ -298,7 +299,7 @@ export async function deleteOrder(id: string): Promise<void> {
 
 /** Products the order form may add, with price and available stock. */
 export async function listOrderProductOptions(orderType: string, channelId?: string): Promise<OrderProductOption[]> {
-  let rows: { _id: Types.ObjectId; sku: string; name: string; pricePaise: number }[];
+  let rows: { _id: Types.ObjectId; sku: string; name: string; pricePaise: number; allocatedQty?: number | null }[];
   if (orderType === "MARKETPLACE") {
     if (!channelId || !isValidObjectId(channelId)) return [];
     const listed = await ChannelProduct.find({ channel: channelId })
@@ -314,6 +315,7 @@ export async function listOrderProductOptions(orderType: string, channelId?: str
         sku: l.product!.sku,
         name: l.product!.name,
         pricePaise: l.channelPricePaise || l.product!.sellingPricePaise,
+        allocatedQty: l.allocatedQty ?? null,
       }));
   } else {
     const products = await Product.find({ status: "active" }).select("sku name sellingPricePaise").lean();
@@ -321,6 +323,14 @@ export async function listOrderProductOptions(orderType: string, channelId?: str
   }
   const stock = await Inventory.find({ product: { $in: rows.map((r) => r._id) } }).select("product quantity").lean();
   const qty = new Map(stock.map((s) => [String(s.product), s.quantity]));
+  if (orderType === "MARKETPLACE" && channelId) {
+    // Cap by what is left of the quantity assigned to this marketplace
+    const sellable = await sellableOnChannel(
+      channelId,
+      rows.map((r) => ({ productId: String(r._id), stock: qty.get(String(r._id)) ?? 0, allocatedQty: r.allocatedQty }))
+    );
+    for (const [id, n] of sellable) qty.set(id, n);
+  }
   return rows
     .map((r) => ({ productId: String(r._id), sku: r.sku, name: r.name, price: fromPaise(r.pricePaise), stock: qty.get(String(r._id)) ?? 0 }))
     .sort((a, b) => a.sku.localeCompare(b.sku));

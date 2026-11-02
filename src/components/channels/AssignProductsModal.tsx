@@ -31,6 +31,8 @@ export function AssignProductsModal({ channelId, channelName, open, onClose }: A
   const [page, setPage] = useState(1);
   const [loaded, setLoaded] = useState<{ key: string; data: Paginated<AssignableProduct> } | null>(null);
   const [selected, setSelected] = useState<Map<string, AssignableProduct>>(new Map());
+  /** Assigned qty typed per selected product ('' = no limit) */
+  const [qty, setQty] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const q = useDebounce(search, 300);
   const key = `${channelId}|${page}|${q}|${hideAssigned}`;
@@ -76,6 +78,7 @@ export function AssignProductsModal({ channelId, channelName, open, onClose }: A
 
   const close = () => {
     setSelected(new Map());
+    setQty({});
     setSearch("");
     setPage(1);
     onClose();
@@ -86,6 +89,7 @@ export function AssignProductsModal({ channelId, channelName, open, onClose }: A
     try {
       const res = await apiRequest<{ added: number; skipped: number }>(`/api/channels/${channelId}/products`, "POST", {
         productIds: [...selected.keys()],
+        allocations: [...selected.keys()].map((id) => ({ product: id, allocatedQty: qty[id] === undefined || qty[id] === "" ? null : Number(qty[id]) })),
       });
       toast.success(`${res.added} product(s) assigned to ${channelName}${res.skipped ? ` · ${res.skipped} skipped` : ""}`);
       close();
@@ -102,7 +106,7 @@ export function AssignProductsModal({ channelId, channelName, open, onClose }: A
       open={open}
       onClose={close}
       title={`Assign Products — ${channelName}`}
-      subtitle="Tick the products you sell on this marketplace. Only assigned products appear on its orders."
+      subtitle="Tick the products you sell here and, if you want a limit, how many units this marketplace may sell (blank = no limit)."
       icon={<ListPlus className="w-4 h-4" />}
       size="lg"
       footer={
@@ -157,12 +161,13 @@ export function AssignProductsModal({ channelId, channelName, open, onClose }: A
                 <th className="px-3 py-2 text-left hidden sm:table-cell">Category</th>
                 <th className="px-3 py-2 text-right hidden sm:table-cell">Price</th>
                 <th className="px-3 py-2 text-right">Stock</th>
+                <th className="px-3 py-2 text-right w-32">Assign Qty</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {data && data.items.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
                     {hideAssigned && !q ? "Every active product is already on this marketplace." : "No matching products"}
                   </td>
                 </tr>
@@ -196,6 +201,29 @@ export function AssignProductsModal({ channelId, channelName, open, onClose }: A
                   <td className="px-3 py-2 hidden sm:table-cell">{p.category || "—"}</td>
                   <td className="px-3 py-2 text-right hidden sm:table-cell">{formatCurrency(p.sellingPrice)}</td>
                   <td className={`px-3 py-2 text-right font-bold ${p.stock > 0 ? "text-slate-800" : "text-rose-600"}`}>{formatNumber(p.stock)}</td>
+                  <td className="px-3 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
+                    {!p.assigned && (
+                      <input
+                        type="number"
+                        min={0}
+                        max={p.stock}
+                        step={1}
+                        inputMode="numeric"
+                        placeholder="No limit"
+                        aria-label={`Assign qty for ${p.sku}`}
+                        value={qty[p._id] ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setQty((q) => ({ ...q, [p._id]: v }));
+                          // Typing a quantity selects the product
+                          if (v !== "" && !selected.has(p._id)) toggle(p);
+                        }}
+                        className={`w-24 h-8 px-2 text-xs text-right rounded-md border focus:outline-none focus:border-brand ${
+                          qty[p._id] && Number(qty[p._id]) > p.stock ? "border-rose-400 text-rose-700" : "border-slate-300"
+                        }`}
+                      />
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

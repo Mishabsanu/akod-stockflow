@@ -1,4 +1,5 @@
 import "server-only";
+import { assertAllocatable, channelSold, remainingOf, sellableOnChannel } from "./channelAllocation";
 import { isValidObjectId, Types } from "mongoose";
 import type { Channel, ChannelProduct } from "@/lib/commerceTypes";
 import { fromPaise, toPaise } from "@/lib/money";
@@ -103,6 +104,7 @@ interface CpAgg {
   channel: Types.ObjectId;
   channelSku?: string;
   channelPricePaise: number;
+  allocatedQty?: number | null;
   createdAt: Date;
   product: { _id: Types.ObjectId; sku: string; name: string; category?: string; sellingPricePaise: number; status: RecordStatus };
 }
@@ -136,23 +138,33 @@ export async function listChannelProducts(channelId: string, query: ListQuery): 
     },
   ]);
   const items = res?.items ?? [];
-  const stock = await stockFor(items.map((i) => i.product._id));
-  return paginate(items.map((i) => toChannelProduct(i, stock.get(String(i.product._id)) ?? 0)), res?.total[0]?.n ?? 0, query);
+  const ids = items.map((i) => i.product._id);
+  const [stock, sold] = await Promise.all([stockFor(ids), channelSold(channelId, ids)]);
+  return paginate(
+    items.map((i) => toChannelProduct(i, stock.get(String(i.product._id)) ?? 0, sold.get(String(i.product._id)) ?? 0)),
+    res?.total[0]?.n ?? 0,
+    query
+  );
 }
 
 export async function allChannelProducts(channelId: string, query: ListQuery): Promise<ChannelProduct[]> {
   if (!isValidObjectId(channelId)) return [];
   const items = await ChannelProductModel.aggregate<CpAgg>([...cpPipeline(channelId, query), { $sort: { "product.name": 1 } }]);
-  const stock = await stockFor(items.map((i) => i.product._id));
-  return items.map((i) => toChannelProduct(i, stock.get(String(i.product._id)) ?? 0));
+  const ids = items.map((i) => i.product._id);
+  const [stock, sold] = await Promise.all([stockFor(ids), channelSold(channelId, ids)]);
+  return items.map((i) => toChannelProduct(i, stock.get(String(i.product._id)) ?? 0, sold.get(String(i.product._id)) ?? 0));
 }
 
-function toChannelProduct(i: CpAgg, stock: number): ChannelProduct {
+function toChannelProduct(i: CpAgg, stock: number, sold: number): ChannelProduct {
+  const allocatedQty = i.allocatedQty ?? null;
   return toPlain<ChannelProduct>({
     _id: i._id,
     channel: i.channel,
     channelSku: i.channelSku ?? "",
     channelPrice: fromPaise(i.channelPricePaise),
+    allocatedQty,
+    soldQty: sold,
+    remainingQty: remainingOf(allocatedQty, sold),
     stock,
     createdAt: i.createdAt,
     product: {
@@ -177,12 +189,17 @@ export async function listChannelProductOptions(channelId: string): Promise<Sell
     { $sort: { "product.name": 1 } },
   ]);
   const stock = await stockFor(rows.map((r) => r.product._id));
+  const sellable = await sellableOnChannel(
+    channelId,
+    rows.map((r) => ({ productId: String(r.product._id), stock: stock.get(String(r.product._id)) ?? 0, allocatedQty: r.allocatedQty }))
+  );
   return rows.map((r) => ({
     productId: String(r.product._id),
     sku: r.product.sku,
     name: r.product.name,
     price: fromPaise(r.channelPricePaise || r.product.sellingPricePaise),
-    stock: stock.get(String(r.product._id)) ?? 0,
+    // Central stock, capped by what is left of the quantity assigned to this marketplace
+    stock: sellable.get(String(r.product._id)) ?? 0,
   }));
 }
 
@@ -236,15 +253,23 @@ export async function listAssignableProducts(channelId: string, query: ListQuery
 }
 
 /** Adds products to the channel; ones already assigned (or missing / inactive) are skipped. */
-export async function assignProducts(channelId: string, productIds: string[], userId: string) {
+export async function assignProducts(
+  channelId: string,
+  productIds: string[],
+  userId: string,
+  allocations: { product: string; allocatedQty?: number | null }[] = []
+) {
   await getChannel(channelId);
   const unique = [...new Set(productIds)];
-  const valid = await Product.find({ _id: { $in: unique }, status: "active" }).distinct("_id");
-  const existing = new Set((await ChannelProductModel.find({ channel: channelId, product: { $in: valid } }).distinct("product")).map(String));
-  const toAdd = valid.filter((id) => !existing.has(String(id)));
+  const valid = await Product.find({ _id: { $in: unique }, status: "active" }).select("_id sku").lean();
+  const existing = new Set((await ChannelProductModel.find({ channel: channelId, product: { $in: valid.map((v) => v._id) } }).distinct("product")).map(String));
+  const toAdd = valid.filter((p) => !existing.has(String(p._id)));
+  const qtyOf = new Map(allocations.map((a) => [a.product, a.allocatedQty ?? null]));
+  // Every assigned qty must fit the stock on hand (checked before anything is saved)
+  for (const p of toAdd) await assertAllocatable(channelId, p, qtyOf.get(String(p._id)) ?? null);
   if (toAdd.length) {
     await ChannelProductModel.insertMany(
-      toAdd.map((product) => ({ channel: channelId, product, createdBy: userId })),
+      toAdd.map((p) => ({ channel: channelId, product: p._id, allocatedQty: qtyOf.get(String(p._id)) ?? null, createdBy: userId })),
       { ordered: false }
     ).catch((e: { code?: number }) => {
       // A parallel assign of the same product — the other request won; nothing to do
@@ -263,11 +288,14 @@ export async function removeChannelProducts(channelId: string, ids: string[]) {
 
 export async function updateChannelProduct(channelId: string, id: string, input: ChannelProductInput): Promise<void> {
   if (!isValidObjectId(channelId) || !isValidObjectId(id)) throw notFound("Channel product");
-  const res = await ChannelProductModel.updateOne(
+  const row = await ChannelProductModel.findOne({ _id: id, channel: channelId }).populate<{ product: { _id: Types.ObjectId; sku: string } }>("product", "sku").lean();
+  if (!row?.product) throw notFound("Channel product");
+  const allocatedQty = input.allocatedQty ?? null;
+  await assertAllocatable(channelId, row.product, allocatedQty);
+  await ChannelProductModel.updateOne(
     { _id: id, channel: channelId },
-    { $set: { channelSku: input.channelSku.trim(), channelPricePaise: toPaise(input.channelPrice) } }
+    { $set: { channelSku: input.channelSku.trim(), channelPricePaise: toPaise(input.channelPrice), allocatedQty } }
   );
-  if (!res.matchedCount) throw notFound("Channel product");
 }
 
 /** Channels a product is listed on (product detail page). */

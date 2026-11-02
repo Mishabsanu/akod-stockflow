@@ -1,4 +1,5 @@
 import "server-only";
+import { assertAllocatable } from "../services/channelAllocation";
 import { isValidObjectId } from "mongoose";
 import type { Channel, ChannelProduct } from "@/lib/commerceTypes";
 import { toPaise } from "@/lib/money";
@@ -26,7 +27,7 @@ export const channelsIo: IoEntity<Channel> = {
 
 /**
  * Products on one marketplace (?channel=<id>). Import assigns SKUs to that channel
- * (creates the listing, or updates its marketplace SKU / price).
+ * (creates the listing, or updates its marketplace SKU / price / assigned qty; blank cells keep the current value).
  */
 export const channelProductsIo: IoEntity<ChannelProduct> = {
   title: "Channel Products",
@@ -44,7 +45,10 @@ export const channelProductsIo: IoEntity<ChannelProduct> = {
     { header: "Marketplace SKU", field: "channelSku", value: (r) => r.channelSku || "", width: 18, aliases: ["asin", "fsn", "listingid"] },
     { header: "Marketplace Price", field: "channelPrice", value: (r) => r.channelPrice || "", numeric: true, width: 16, aliases: ["channelprice", "price"] },
     { header: "Selling Price", value: (r) => r.product.sellingPrice, width: 14 },
-    { header: "Stock", value: (r) => r.stock ?? 0, width: 10 },
+    { header: "Assigned Qty", field: "allocatedQty", value: (r) => r.allocatedQty ?? "", numeric: true, width: 13, aliases: ["assigned", "allocatedqty", "qty"] },
+    { header: "Sold", value: (r) => r.soldQty, width: 8 },
+    { header: "Remaining", value: (r) => r.remainingQty ?? "", width: 11 },
+    { header: "Central Stock", value: (r) => r.stock ?? 0, width: 13, aliases: ["stock"] },
     { header: "Product Status", value: (r) => r.product.status, width: 12 },
   ],
   async importRow(record, user, ctx) {
@@ -54,7 +58,7 @@ export const channelProductsIo: IoEntity<ChannelProduct> = {
     }
     const sku = String(record.sku ?? "").trim().toUpperCase();
     if (!sku) throw new AppError("SKU Code is required");
-    const product = await Product.findOne({ sku }).select("_id status").lean();
+    const product = await Product.findOne({ sku }).select("_id sku status").lean();
     if (!product) throw new AppError(`SKU ${sku} not found`);
     if (product.status !== "active") throw new AppError(`${sku} is inactive`);
     const price = record.channelPrice;
@@ -65,6 +69,12 @@ export const channelProductsIo: IoEntity<ChannelProduct> = {
     const set: Record<string, unknown> = {};
     if (record.channelSku !== undefined) set.channelSku = String(record.channelSku).trim().slice(0, 60);
     if (typeof price === "number") set.channelPricePaise = toPaise(price);
+    const qty = record.allocatedQty;
+    if (qty !== undefined) {
+      if (typeof qty !== "number" || qty < 0 || !Number.isInteger(qty)) throw new AppError("Assigned Qty must be a whole number");
+      await assertAllocatable(channelId, product, qty);
+      set.allocatedQty = qty;
+    }
     if (!ctx.dryRun) {
       await ChannelProductModel.updateOne(
         { channel: channelId, product: product._id },

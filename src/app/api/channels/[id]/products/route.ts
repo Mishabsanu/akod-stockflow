@@ -27,10 +27,10 @@ export const GET = apiHandler<P>("authenticated", async ({ req, params, user }) 
   return listChannelProducts(params.id, parseListQuery(search, CHANNEL_PRODUCT_FILTERS));
 });
 
-/** Assign products: `{ productIds: string[] }` → `{ added, skipped }`. */
+/** Assign products: `{ productIds: string[], allocations?: { product, allocatedQty }[] }` → `{ added, skipped }`. */
 export const POST = apiHandler<P>({ module: "channel", action: "update" }, async ({ req, params, user }) => {
-  const { productIds } = await readBody(req, assignProductsSchema);
-  return assignProducts(params.id, productIds, user._id);
+  const { productIds, allocations } = await readBody(req, assignProductsSchema);
+  return assignProducts(params.id, productIds, user._id, allocations);
 });
 
 /** Remove listings: `{ ids: string[] }` (channel-product ids) → `{ removed }`. */
