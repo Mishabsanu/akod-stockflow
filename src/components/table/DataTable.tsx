@@ -1,7 +1,7 @@
 "use client";
 
-import { Database } from "lucide-react";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, CornerDownRight, Database } from "lucide-react";
+import { Fragment, useCallback, useMemo, useState, type ReactNode } from "react";
 import { useListParams } from "@/hooks/useListParams";
 import type { Paginated } from "@/lib/types";
 import { DataCardList } from "./DataCardList";
@@ -16,6 +16,10 @@ interface DataTableProps<T extends { _id: string }> {
   searchPlaceholder: string;
   filters?: FilterConfig[];
   rowActions?: (row: T) => ReactNode;
+  /** Child rows shown under a row when it is expanded (chevron in the first column), e.g. product variants */
+  subRows?: (row: T) => T[] | undefined;
+  /** Label for the Expand All button, e.g. "variants" */
+  subRowsLabel?: string;
 }
 
 const ALIGN = { left: "text-left", center: "text-center", right: "text-right" };
@@ -32,6 +36,8 @@ export function DataTable<T extends { _id: string }>({
   searchPlaceholder,
   filters = [],
   rowActions,
+  subRows,
+  subRowsLabel = "rows",
 }: DataTableProps<T>) {
   const { get, update, isPending } = useListParams();
   const [visibleKeys, setVisibleKeys] = useState(
@@ -61,6 +67,81 @@ export function DataTable<T extends { _id: string }>({
 
   const colSpan = activeColumns.length + (rowActions ? 1 : 0);
 
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const parentIds = useMemo(
+    () => (subRows ? data.items.filter((r) => (subRows(r)?.length ?? 0) > 0).map((r) => r._id) : []),
+    [data.items, subRows]
+  );
+  const allExpanded = parentIds.length > 0 && parentIds.every((id) => expanded.has(id));
+  const toggleRow = useCallback((id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+  const toggleAll = () => setExpanded(allExpanded ? new Set() : new Set(parentIds));
+
+  const expandAllButton =
+    parentIds.length > 0 ? (
+      <button
+        type="button"
+        onClick={toggleAll}
+        className="flex items-center justify-center gap-1.5 px-3 py-2 md:py-0 w-full text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-head"
+        title={allExpanded ? `Hide all ${subRowsLabel}` : `Show all ${subRowsLabel}`}
+      >
+        {allExpanded ? <ChevronsDownUp className="w-3.5 h-3.5 text-brand" /> : <ChevronsUpDown className="w-3.5 h-3.5 text-brand" />}
+        {allExpanded ? "Collapse All" : "Expand All"}
+      </button>
+    ) : undefined;
+
+  const renderRow = (row: T, sub: boolean) => {
+    const children = !sub && subRows ? subRows(row) ?? [] : [];
+    const open = expanded.has(row._id);
+    return (
+      <tr key={row._id} className={`transition-colors ${sub ? "bg-slate-50/70 hover:bg-head" : open ? "bg-brand-light/30 hover:bg-head" : "hover:bg-head"}`}>
+        {activeColumns.map((col, i) => {
+          const content = col.render ? col.render(row, { sub }) : ((row as Record<string, unknown>)[col.key] as ReactNode) || "—";
+          const first = i === 0 && Boolean(subRows);
+          return (
+            <td
+              key={col.key}
+              className={`${sub ? "py-1.5" : "py-2"} px-3 align-middle border-r border-line whitespace-nowrap ${ALIGN[col.align || "left"]} ${
+                col.mono ? "font-mono font-semibold text-slate-700" : "text-slate-700"
+              }`}
+            >
+              {first ? (
+                <span className={`inline-flex items-center gap-1.5 ${sub ? "pl-5" : ""}`}>
+                  {sub ? (
+                    <CornerDownRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  ) : children.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleRow(row._id)}
+                      aria-expanded={open}
+                      aria-label={open ? `Hide ${subRowsLabel}` : `Show ${subRowsLabel}`}
+                      title={open ? `Hide ${subRowsLabel}` : `Show ${children.length} ${subRowsLabel}`}
+                      className="p-0.5 -ml-1 rounded text-slate-500 hover:text-brand hover:bg-brand-light"
+                    >
+                      {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </button>
+                  ) : (
+                    <span className="w-4 shrink-0" />
+                  )}
+                  {content}
+                </span>
+              ) : (
+                content
+              )}
+            </td>
+          );
+        })}
+        {rowActions && <td className="px-3 py-1.5 align-middle text-center whitespace-nowrap">{rowActions(row)}</td>}
+      </tr>
+    );
+  };
+
   return (
     <div className="w-full bg-white border border-line text-slate-800 relative">
       <TableFilterBar
@@ -75,11 +156,21 @@ export function DataTable<T extends { _id: string }>({
         onToggleColumn={toggleColumn}
         onShowAllColumns={showAllColumns}
         total={data.total}
+        actions={expandAllButton}
       />
 
       <div className={`md:hidden border-t border-line relative transition-opacity ${isPending ? "opacity-50" : ""}`}>
         {isPending && <div className="absolute inset-x-0 top-0 h-0.5 bg-brand animate-pulse" />}
-        <DataCardList rows={data.items} columns={activeColumns} itemName={itemName} rowActions={rowActions} />
+        <DataCardList
+          rows={data.items}
+          columns={activeColumns}
+          itemName={itemName}
+          rowActions={rowActions}
+          subRows={subRows}
+          subRowsLabel={subRowsLabel}
+          expanded={expanded}
+          onToggle={toggleRow}
+        />
       </div>
 
       <div
@@ -112,24 +203,10 @@ export function DataTable<T extends { _id: string }>({
               </tr>
             ) : (
               data.items.map((row) => (
-                <tr key={row._id} className="hover:bg-head transition-colors">
-                  {activeColumns.map((col) => {
-                    const content = col.render
-                      ? col.render(row)
-                      : ((row as Record<string, unknown>)[col.key] as ReactNode) || "—";
-                    return (
-                      <td
-                        key={col.key}
-                        className={`px-3 py-2 align-middle border-r border-line whitespace-nowrap ${ALIGN[col.align || "left"]} ${
-                          col.mono ? "font-mono font-semibold text-slate-700" : "text-slate-700"
-                        }`}
-                      >
-                        {content}
-                      </td>
-                    );
-                  })}
-                  {rowActions && <td className="px-3 py-2 align-middle text-center whitespace-nowrap">{rowActions(row)}</td>}
-                </tr>
+                <Fragment key={row._id}>
+                  {renderRow(row, false)}
+                  {expanded.has(row._id) && (subRows?.(row) ?? []).map((child) => renderRow(child, true))}
+                </Fragment>
               ))
             )}
           </tbody>

@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormikHelpers } from "formik";
+import { setIn, type FormikHelpers, type FormikErrors } from "formik";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ApiError } from "@/services/apiClient";
@@ -31,7 +31,11 @@ export function useApiSubmit<V, R = unknown>({ request, successMessage, redirect
       router.refresh();
     } catch (error) {
       if (error instanceof ApiError) {
-        if (error.fieldErrors) helpers.setErrors(error.fieldErrors as never);
+        // Server paths like "variants[0].sku" become nested Formik errors
+        if (error.fieldErrors) {
+          const nested = Object.entries(error.fieldErrors).reduce<FormikErrors<V>>((acc, [path, msg]) => setIn(acc, path, msg), {});
+          helpers.setErrors(nested);
+        }
         toast.error(error.message);
       } else {
         toast.error("Something went wrong. Please try again.");

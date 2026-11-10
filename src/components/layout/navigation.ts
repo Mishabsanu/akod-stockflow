@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, ClipboardList, LayoutDashboard, Package, Settings, Store, Wallet, type LucideIcon } from "lucide-react";
+import { BarChart3, Boxes, ClipboardList, Factory, LayoutDashboard, Package, Settings, Store, Wallet, type LucideIcon } from "lucide-react";
 import { can, type PermissionModule } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/types";
 
@@ -31,7 +31,10 @@ export const NAV_MODULES: NavModule[] = [
     label: "Products",
     icon: Package,
     basePath: "/dashboard/products",
-    items: [{ label: "Products", href: "/dashboard/products", permission: "product" }],
+    items: [
+      { label: "Products", href: "/dashboard/products", permission: "product" },
+      { label: "Categories", href: "/dashboard/products/categories", permission: "category" },
+    ],
   },
   {
     id: "inventory",
@@ -44,6 +47,16 @@ export const NAV_MODULES: NavModule[] = [
       { label: "Low Stock", href: "/dashboard/inventory/low-stock", permission: "stock" },
       { label: "Material Requests", href: "/dashboard/inventory/requests", permission: "material_request" },
       { label: "Transactions", href: "/dashboard/inventory/transactions", permission: "stock" },
+    ],
+  },
+  {
+    id: "production",
+    label: "Batch Codes",
+    icon: Factory,
+    basePath: "/dashboard/production",
+    items: [
+      { label: "Manufacturers", href: "/dashboard/production", permission: "production" },
+      { label: "Batch Lookup", href: "/dashboard/production/lookup", permission: "production" },
     ],
   },
   {

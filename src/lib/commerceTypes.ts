@@ -2,6 +2,7 @@
  * Products, inventory, channels, customers and orders. Money is in rupees here
  * (the server stores integer paise and converts at the service boundary).
  */
+import type { AttachedDocument } from "./documents";
 import type { NamedRef, RecordStatus } from "./types";
 
 // ─── Products ────────────────────────────────────────────────────────────────
@@ -13,13 +14,40 @@ export interface Product {
   barcode?: string;
   category?: string;
   description?: string;
+  /** Maximum retail price (0 = not set) */
+  mrp: number;
   sellingPrice: number;
   costPrice: number;
   /** Low-stock alert when available stock is at or below this */
   reorderLevel: number;
   status: RecordStatus;
-  /** Central stock on hand (joined from Inventory) */
+  /** Central stock on hand (joined from Inventory); for a product with variants, the variants' total */
   stock?: number;
+  /** Photos, first = cover (a variant has at most one) */
+  images?: ProductImage[];
+  /** Set on a variant: its parent product */
+  parent?: string | null;
+  /** Variant label, e.g. "500 g" or "Red / XL" (name = parent name - variant name) */
+  variantName?: string;
+  /** True on a product whose stock and sales are kept on its variants */
+  hasVariants?: boolean;
+  /** Variants of this product (list and detail pages) */
+  variants?: Product[];
+  /** Variant detail page: the parent's name */
+  parentName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type ProductImage = Pick<AttachedDocument, "url" | "publicId" | "resourceType" | "name" | "size">;
+
+export interface Category {
+  _id: string;
+  name: string;
+  description?: string;
+  status: RecordStatus;
+  /** Products (not counting variants) in this category */
+  productCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }

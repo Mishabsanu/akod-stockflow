@@ -43,7 +43,7 @@ export function FormCard({ title, description, badge, icon, backHref, submitLabe
         </div>
       </div>
 
-      <div className="p-4 sm:p-6 space-y-8">{children}</div>
+      <div className="p-4 sm:p-5 space-y-5">{children}</div>
 
       <div className="px-4 sm:px-6 py-4 bg-slate-50/80 border-t border-slate-200 flex items-center justify-between gap-3">
         <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500">
@@ -80,12 +80,12 @@ export function FormCard({ title, description, badge, icon, backHref, submitLabe
 /** Titled group of fields inside a FormCard. */
 export function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       <div className="pb-1.5 border-b border-slate-100">
         <h2 className="text-xs font-bold text-brand uppercase tracking-wider">{title}</h2>
         {description && <p className="text-[11px] text-slate-500 mt-0.5">{description}</p>}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">{children}</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3">{children}</div>
     </section>
   );
 }

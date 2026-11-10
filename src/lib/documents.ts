@@ -14,6 +14,7 @@ export interface AttachedDocument {
 }
 
 export const MAX_DOCUMENTS = 20;
+export const IMAGE_ACCEPT = ".jpg,.jpeg,.png,.webp";
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 export const DOCUMENT_ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx";
 export const DOCUMENT_TYPES = [
@@ -42,6 +43,7 @@ export const DOCUMENT_FOLDERS = [
   "productions",
   "stock",
   "products",
+  "product_variants",
   "checkups",
   "audits",
 ] as const;

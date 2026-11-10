@@ -14,7 +14,7 @@ interface FormFieldProps {
 /** Label + control + inline error, shared by every form input. */
 export function FormField({ label, htmlFor, required, error, hint, className = "", children }: FormFieldProps) {
   return (
-    <div className={`space-y-1.5 ${className}`}>
+    <div className={`space-y-1 ${className}`}>
       <div className="flex items-center justify-between">
         <label htmlFor={htmlFor} className="block text-[12px] font-semibold text-slate-700 select-none">
           {label}

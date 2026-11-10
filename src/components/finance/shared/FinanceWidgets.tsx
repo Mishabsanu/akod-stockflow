@@ -83,7 +83,7 @@ export function StaticTable<T extends { _id: string }>({
               <tr key={row._id} className={`hover:bg-slate-50/70 ${rowClassName?.(row) ?? ""}`}>
                 {columns.map((c) => (
                   <td key={c.key} className={`px-3 py-2 align-top ${ALIGN[c.align ?? "left"]} ${c.mono ? "font-mono" : ""} ${c.align === "right" ? "tabular-nums whitespace-nowrap" : ""}`}>
-                    {c.render ? c.render(row) : String((row as Record<string, unknown>)[c.key] ?? "—")}
+                    {c.render ? c.render(row, { sub: false }) : String((row as Record<string, unknown>)[c.key] ?? "—")}
                   </td>
                 ))}
               </tr>

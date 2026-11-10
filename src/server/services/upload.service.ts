@@ -26,7 +26,9 @@ export async function uploadDocument(file: File, folder: DocumentFolder): Promis
   if (file.size > MAX_DOCUMENT_BYTES) throw new AppError(`${file.name} is larger than 10 MB`, 422);
 
   const { cloud, key, secret } = config();
-  const params = { folder: `proserve/${folder}`, timestamp: String(Math.floor(Date.now() / 1000)) };
+  // Root folder for this app on Cloudinary (CLOUDINARY_FOLDER, default "akod-eco"), e.g. akod-eco/products
+  const root = (process.env.CLOUDINARY_FOLDER || "akod-eco").replace(/^\/+|\/+$/g, "");
+  const params = { folder: `${root}/${folder}`, timestamp: String(Math.floor(Date.now() / 1000)) };
   const form = new FormData();
   form.append("file", file);
   form.append("api_key", key);

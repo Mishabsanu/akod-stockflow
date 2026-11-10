@@ -1,19 +1,20 @@
 import "server-only";
-import { isValidObjectId } from "mongoose";
+import { isValidObjectId, type Types } from "mongoose";
 import { fromPaise, toPaise } from "@/lib/money";
 import type { Paginated, Product } from "@/lib/types";
 import type { ProductInput } from "@/lib/validation/product.schema";
 import { ChannelProduct } from "../models/ChannelProduct";
 import { Inventory } from "../models/Inventory";
-import { Order } from "../models/Order";
 import { Product as ProductModel, type ProductDoc } from "../models/Product";
-import { StockTransaction } from "../models/StockTransaction";
 import { AppError, notFound } from "../http/errors";
 import { paginate, searchFilter, statusFilter, type Filter, type ListQuery } from "../http/query";
 import { toPlain } from "../utils/serialize";
+import { canonicalCategory, listCategoryNames } from "./category.service";
+import { applyVariantSync, hasHistory, planVariantSync, refreshVariants } from "./productVariant.service";
 import { stockFor } from "./stock.service";
+import { destroyRemoved } from "./upload.service";
 
-const SEARCH_FIELDS = ["sku", "name", "barcode", "category"];
+const SEARCH_FIELDS = ["sku", "name", "barcode", "category", "variantName"];
 const PUBLIC_FIELDS = "-createdBy -__v";
 
 const SORTS: Record<string, Record<string, 1 | -1>> = {
@@ -22,6 +23,9 @@ const SORTS: Record<string, Record<string, 1 | -1>> = {
   name: { name: 1 },
   sku: { sku: 1 },
 };
+
+/** Not sold or stocked directly: its variants are. */
+export const SELLABLE_FILTER: Filter = { hasVariants: { $ne: true } };
 
 /** Product line for order forms and pickers: what can be sold, at what price, with how much stock. */
 export interface SellableProduct {
@@ -33,36 +37,75 @@ export interface SellableProduct {
 }
 
 export function toProduct(doc: ProductDoc, stock?: number): Product {
-  const { sellingPricePaise, costPricePaise, ...rest } = toPlain<
-    Omit<Product, "sellingPrice" | "costPrice"> & { sellingPricePaise: number; costPricePaise: number }
+  const { mrpPaise, sellingPricePaise, costPricePaise, ...rest } = toPlain<
+    Omit<Product, "mrp" | "sellingPrice" | "costPrice"> & { mrpPaise?: number; sellingPricePaise: number; costPricePaise: number }
   >(doc);
   return {
     ...rest,
+    mrp: fromPaise(mrpPaise ?? 0),
     sellingPrice: fromPaise(sellingPricePaise),
     costPrice: fromPaise(costPricePaise),
     ...(stock !== undefined && { stock }),
   };
 }
 
-/** Form / import values (rupees) → stored shape (paise). */
+/** Form / import values (rupees) → stored shape (paise). Variants are saved separately. */
 export function toProductDoc(input: ProductInput) {
-  const { sellingPrice, costPrice, ...rest } = input;
+  const { mrp, sellingPrice, costPrice, variants, images, ...rest } = input;
+  void variants;
   return {
     ...rest,
+    ...(images !== undefined && { images }),
     sku: input.sku.trim().toUpperCase(),
+    mrpPaise: toPaise(mrp),
     sellingPricePaise: toPaise(sellingPrice),
     costPricePaise: toPaise(costPrice),
   };
 }
 
-export function productListFilter(query: ListQuery): Filter {
-  const filter: Filter = { ...searchFilter(query.search, SEARCH_FIELDS), ...statusFilter(query.status) };
+/** Top-level products; a search also finds a product through its variants' SKU / name / barcode. */
+export async function productListFilter(query: ListQuery): Promise<Filter> {
+  const filter: Filter = { parent: null, ...statusFilter(query.status) };
   if (query.filters.category) filter.category = query.filters.category;
+  const search = searchFilter(query.search, SEARCH_FIELDS);
+  if (search.$or) {
+    const viaVariant = await ProductModel.find({ parent: { $ne: null }, ...search }).distinct("parent");
+    filter.$or = [...(search.$or as Filter[]), ...(viaVariant.length ? [{ _id: { $in: viaVariant } }] : [])];
+  }
   return filter;
 }
 
+/** Variants of these products (oldest first), with stock. */
+async function variantsOf(parentIds: Types.ObjectId[]): Promise<Map<string, Product[]>> {
+  const out = new Map<string, Product[]>();
+  if (parentIds.length === 0) return out;
+  const docs = await ProductModel.find({ parent: { $in: parentIds } })
+    .sort({ createdAt: 1, _id: 1 })
+    .select(PUBLIC_FIELDS)
+    .lean<ProductDoc[]>();
+  const stock = await stockFor(docs.map((d) => d._id));
+  for (const d of docs) {
+    const key = String(d.parent);
+    out.set(key, [...(out.get(key) ?? []), toProduct(d, stock.get(String(d._id)) ?? 0)]);
+  }
+  return out;
+}
+
+/** Attaches variants; a product with variants shows their total stock. */
+async function withVariants(docs: ProductDoc[]): Promise<Product[]> {
+  const [stock, variants] = await Promise.all([
+    stockFor(docs.map((p) => p._id)),
+    variantsOf(docs.filter((p) => p.hasVariants).map((p) => p._id)),
+  ]);
+  return docs.map((p) => {
+    const list = variants.get(String(p._id));
+    if (!list?.length) return toProduct(p, stock.get(String(p._id)) ?? 0);
+    return { ...toProduct(p, list.reduce((n, v) => n + (v.stock ?? 0), 0)), variants: list };
+  });
+}
+
 export async function listProducts(query: ListQuery): Promise<Paginated<Product>> {
-  const filter = productListFilter(query);
+  const filter = await productListFilter(query);
   const [items, total] = await Promise.all([
     ProductModel.find(filter)
       .sort(SORTS[query.sort] || SORTS.newest)
@@ -72,55 +115,101 @@ export async function listProducts(query: ListQuery): Promise<Paginated<Product>
       .lean<ProductDoc[]>(),
     ProductModel.countDocuments(filter),
   ]);
-  const stock = await stockFor(items.map((p) => p._id));
-  return paginate(
-    items.map((p) => toProduct(p, stock.get(String(p._id)) ?? 0)),
-    total,
-    query
-  );
+  return paginate(await withVariants(items), total, query);
 }
 
 export async function getProduct(id: string): Promise<Product> {
   if (!isValidObjectId(id)) throw notFound("Product");
   const doc = await ProductModel.findById(id).select(PUBLIC_FIELDS).lean<ProductDoc>();
   if (!doc) throw notFound("Product");
-  const stock = await stockFor([doc._id]);
-  return toProduct(doc, stock.get(String(doc._id)) ?? 0);
-}
-
-/** Creates the product and its central Inventory row (quantity 0). */
-export async function createProduct(input: ProductInput, userId: string): Promise<Product> {
-  const doc = await ProductModel.create({ ...toProductDoc(input), createdBy: userId });
-  await Inventory.updateOne({ product: doc._id }, { $setOnInsert: { quantity: 0 } }, { upsert: true });
-  return getProduct(String(doc._id));
-}
-
-/** Orders keep their own copy of SKU, name and price, so editing a product never changes past orders. */
-export async function updateProduct(id: string, input: ProductInput): Promise<Product> {
-  if (!isValidObjectId(id)) throw notFound("Product");
-  const doc = await ProductModel.findByIdAndUpdate(id, toProductDoc(input), { returnDocument: "after", runValidators: true })
-    .select(PUBLIC_FIELDS)
-    .lean<ProductDoc>();
-  if (!doc) throw notFound("Product");
-  return getProduct(String(doc._id));
-}
-
-export async function deleteProduct(id: string): Promise<void> {
-  if (!isValidObjectId(id)) throw notFound("Product");
-  if ((await Order.exists({ "items.product": id })) || (await StockTransaction.exists({ product: id }))) {
-    throw new AppError("This product has orders or stock history. Set it to inactive instead.", 409);
+  const [product] = await withVariants([doc]);
+  if (doc.parent) {
+    const parent = await ProductModel.findById(doc.parent).select("name").lean();
+    product.parentName = parent?.name;
   }
-  const deleted = await ProductModel.findByIdAndDelete(id);
-  if (!deleted) throw notFound("Product");
-  await Promise.all([ChannelProduct.deleteMany({ product: id }), Inventory.deleteOne({ product: id })]);
+  return product;
+}
+
+/** Creates the product, its variants and their central Inventory rows (quantity 0). */
+export async function createProduct(input: ProductInput, userId: string): Promise<Product> {
+  const variants = input.variants ?? [];
+  const plan = await planVariantSync(null, variants);
+  const category = await canonicalCategory(input.category ?? "", userId);
+  const doc = await ProductModel.create({ ...toProductDoc({ ...input, category }), hasVariants: variants.length > 0, createdBy: userId });
+  await Inventory.updateOne({ product: doc._id }, { $setOnInsert: { quantity: 0 } }, { upsert: true });
+  await applyVariantSync(doc, variants, plan, userId);
+  return getProduct(String(doc._id));
 }
 
 /**
- * Active products for local / distributor order forms and stock pickers.
+ * Orders keep their own copy of SKU, name and price, so editing a product never changes past orders.
+ * A variant (CSV import by its SKU) only takes its own fields; name and category come from its parent.
+ */
+export async function updateProduct(id: string, input: ProductInput): Promise<Product> {
+  if (!isValidObjectId(id)) throw notFound("Product");
+  const current = await ProductModel.findById(id).select("parent images hasVariants").lean();
+  if (!current) throw notFound("Product");
+  const fields = toProductDoc(input);
+
+  if (current.parent) {
+    const { sku, barcode, mrpPaise, sellingPricePaise, costPricePaise, reorderLevel, status } = fields;
+    await ProductModel.updateOne(
+      { _id: id },
+      { sku, barcode, mrpPaise, sellingPricePaise, costPricePaise, reorderLevel, status, ...(fields.images && { images: fields.images.slice(0, 1) }) },
+      { runValidators: true }
+    );
+  } else {
+    const plan = input.variants ? await planVariantSync(id, input.variants) : null;
+    const category = await canonicalCategory(input.category ?? "");
+    const doc = await ProductModel.findByIdAndUpdate(
+      id,
+      { ...fields, category, ...(input.variants && { hasVariants: input.variants.length > 0 }) },
+      { returnDocument: "after", runValidators: true }
+    ).lean<ProductDoc>();
+    if (!doc) throw notFound("Product");
+    if (plan && input.variants) await applyVariantSync(doc, input.variants, plan);
+    else if (doc.hasVariants) await refreshVariants(doc);
+  }
+
+  if (fields.images) await destroyRemoved(current.images ?? [], fields.images);
+  return getProduct(id);
+}
+
+/** Deletes a product with its variants, or one variant; anything with orders or stock history is kept. */
+export async function deleteProduct(id: string): Promise<void> {
+  if (!isValidObjectId(id)) throw notFound("Product");
+  const doc = await ProductModel.findById(id).select("parent images").lean();
+  if (!doc) throw notFound("Product");
+  const variants = await ProductModel.find({ parent: id }).select("_id images").lean();
+  const all = [doc, ...variants];
+  for (const p of all) {
+    if (await hasHistory(p._id)) {
+      throw new AppError(
+        p === doc
+          ? "This product has orders or stock history. Set it to inactive instead."
+          : "A variant of this product has orders or stock history. Set the product to inactive instead.",
+        409
+      );
+    }
+  }
+  const ids = all.map((p) => p._id);
+  await Promise.all([
+    ProductModel.deleteMany({ _id: { $in: ids } }),
+    ChannelProduct.deleteMany({ product: { $in: ids } }),
+    Inventory.deleteMany({ product: { $in: ids } }),
+  ]);
+  if (doc.parent && !(await ProductModel.exists({ parent: doc.parent }))) {
+    await ProductModel.updateOne({ _id: doc.parent }, { hasVariants: false });
+  }
+  await destroyRemoved(all.flatMap((p) => p.images ?? []), []);
+}
+
+/**
+ * Active products for local / distributor order forms and stock pickers (variants, never their parent).
  * `inStock` keeps only products with stock available.
  */
 export async function listSellableProducts({ inStock = false, search = "" } = {}): Promise<SellableProduct[]> {
-  const filter: Filter = { status: "active", ...searchFilter(search, ["sku", "name", "barcode"]) };
+  const filter: Filter = { status: "active", ...SELLABLE_FILTER, ...searchFilter(search, ["sku", "name", "barcode"]) };
   const docs = await ProductModel.find(filter).sort({ name: 1 }).select("sku name sellingPricePaise").limit(5000).lean();
   const stock = await stockFor(docs.map((d) => d._id));
   return docs
@@ -134,8 +223,7 @@ export async function listSellableProducts({ inStock = false, search = "" } = {}
     .filter((p) => !inStock || p.stock > 0);
 }
 
-/** Distinct non-empty categories, for the list filter and the form's suggestions. */
-export async function listCategories(): Promise<string[]> {
-  const values = await ProductModel.distinct("category", { category: { $nin: ["", null] } });
-  return (values as string[]).filter(Boolean).sort((a, b) => a.localeCompare(b));
+/** Category names for list filters (all) and the product form (`activeOnly`). */
+export async function listCategories(opts?: { activeOnly?: boolean }): Promise<string[]> {
+  return listCategoryNames(opts);
 }

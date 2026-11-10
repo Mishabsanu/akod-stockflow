@@ -1,10 +1,15 @@
 import type { ReactNode } from "react";
 import type { Option } from "@/lib/types";
 
+export interface RenderCtx {
+  sub: boolean;
+}
+
 export interface Column<T> {
   key: string;
   label: string;
-  render?: (row: T) => ReactNode;
+  /** `ctx.sub` is true on an expanded child row (e.g. a product's variant) */
+  render?: (row: T, ctx: RenderCtx) => ReactNode;
   align?: "left" | "center" | "right";
   /** Monospace styling for codes/IDs */
   mono?: boolean;

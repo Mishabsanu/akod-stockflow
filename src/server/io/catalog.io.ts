@@ -19,6 +19,7 @@ function toInput(p: Product): ProductInput {
     barcode: p.barcode || "",
     category: p.category || "",
     description: p.description || "",
+    mrp: p.mrp ?? 0,
     sellingPrice: p.sellingPrice,
     costPrice: p.costPrice,
     reorderLevel: p.reorderLevel,
@@ -41,14 +42,21 @@ export const productsIo: IoEntity<Product> = {
   module: "product",
   fileName: "Products",
   requiredField: "sku",
-  rows: (params) => listProducts({ ...parseListQuery(params, ["category"]), ...ALL }).then((p) => p.items),
+  // Each product row is followed by its variant rows
+  rows: (params) =>
+    listProducts({ ...parseListQuery(params, ["category"]), ...ALL }).then((p) =>
+      p.items.flatMap((item) => [item, ...(item.variants ?? []).map((v) => ({ ...v, parentSku: item.sku }))])
+    ),
   columns: [
     { header: "SKU Code", field: "sku", value: (p) => p.sku, width: 22, aliases: ["sku", "skucode", "sku_code"] },
     { header: "Product Name", field: "name", value: (p) => p.name, width: 36, aliases: ["name", "product"] },
+    { header: "Parent SKU", value: (p) => (p as Product & { parentSku?: string }).parentSku ?? "", width: 22 },
+    { header: "Variant", value: (p) => p.variantName || "", width: 16 },
     { header: "Barcode", field: "barcode", value: (p) => p.barcode || "", width: 16, aliases: ["ean"] },
     { header: "Category", field: "category", value: (p) => p.category || "", width: 18 },
     { header: "Description", field: "description", value: (p) => p.description || "", width: 40 },
-    { header: "Selling Price", field: "sellingPrice", value: (p) => p.sellingPrice, numeric: true, width: 14, aliases: ["price", "sp", "mrp"] },
+    { header: "MRP", field: "mrp", value: (p) => p.mrp ?? 0, numeric: true, width: 12, aliases: ["maxretailprice"] },
+    { header: "Selling Price", field: "sellingPrice", value: (p) => p.sellingPrice, numeric: true, width: 14, aliases: ["price", "sp"] },
     { header: "Cost Price", field: "costPrice", value: (p) => p.costPrice, numeric: true, width: 14, aliases: ["cost", "cp"] },
     { header: "Reorder Level", field: "reorderLevel", value: (p) => p.reorderLevel, numeric: true, width: 14, aliases: ["lowstock", "minstock"] },
     { header: "Status", field: "status", value: (p) => p.status, width: 10 },

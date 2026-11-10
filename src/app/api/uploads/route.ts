@@ -18,6 +18,7 @@ const FOLDER_MODULE: Record<DocumentFolder, PermissionModule> = {
   productions: "production",
   stock: "stock",
   products: "product",
+  product_variants: "product",
   checkups: "mechanical_checkup",
   audits: "facility_audit",
 };

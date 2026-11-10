@@ -77,12 +77,13 @@ export async function getMaterialRequest(id: string): Promise<MaterialRequest> {
 /** Snapshots SKU / name; products must exist and be active. */
 async function buildItems(items: MaterialRequestInput["items"]) {
   const ids = items.map((i) => i.product);
-  const products = await Product.find({ _id: { $in: ids } }).select("sku name status").lean();
+  const products = await Product.find({ _id: { $in: ids } }).select("sku name status hasVariants").lean();
   const byId = new Map(products.map((p) => [String(p._id), p]));
   return items.map((i, n) => {
     const p = byId.get(i.product);
     if (!p) throw new AppError(`Line ${n + 1}: product not found`, 422);
     if (p.status !== "active") throw new AppError(`${p.sku} is inactive`, 409);
+    if (p.hasVariants) throw new AppError(`${p.sku} has variants — choose one of its variants`, 422);
     return { product: p._id, sku: p.sku, name: p.name, quantity: i.quantity, receivedQty: 0, priority: (i.priority ?? "MEDIUM") as MrPriority };
   });
 }

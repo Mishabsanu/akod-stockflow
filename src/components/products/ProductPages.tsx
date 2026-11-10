@@ -1,5 +1,6 @@
 import { Package } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ImportExport } from "@/components/io/ImportExport";
 import { StockActionButtons } from "@/components/inventory/StockActionButtons";
 import { StockLevelBadge, stockLevel } from "@/components/inventory/StockLevelBadge";
@@ -20,6 +21,7 @@ import { orNotFound } from "@/server/utils/pageData";
 import { getCompanySettings } from "@/server/services/setting.service";
 import { ProductForm } from "./ProductForm";
 import { ProductListView } from "./ProductListView";
+import { ProductGallery, VariantTable } from "./ProductDetailParts";
 import { PRODUCT_UI } from "./productConfig";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -55,14 +57,16 @@ export async function ProductListPage({ searchParams }: { searchParams: SearchPa
 export async function ProductCreatePage() {
   const { allowed } = await getPageAccess("product", "create");
   if (!allowed) return <AccessDenied />;
-  const [categories, settings] = await Promise.all([listCategories(), getCompanySettings()]);
+  const [categories, settings] = await Promise.all([listCategories({ activeOnly: true }), getCompanySettings()]);
   return <ProductForm categories={categories} defaultReorderLevel={settings.defaultReorderLevel} />;
 }
 
 export async function ProductEditPage({ params }: { params: Params }) {
   const { allowed } = await getPageAccess("product", "update");
   if (!allowed) return <AccessDenied />;
-  const [product, categories] = await Promise.all([orNotFound(getProduct((await params).id)), listCategories()]);
+  const [product, categories] = await Promise.all([orNotFound(getProduct((await params).id)), listCategories({ activeOnly: true })]);
+  // Variants are edited on their product's form
+  if (product.parent) redirect(`${PRODUCT_UI.basePath}/${product.parent}/edit`);
   return <ProductForm initial={product} categories={categories} />;
 }
 
@@ -71,7 +75,8 @@ export async function ProductDetailPage({ params }: { params: Params }) {
   if (!allowed) return <AccessDenied />;
   const id = (await params).id;
   const product = await orNotFound(getProduct(id));
-  const canStock = can(user, "stock", "view");
+  const isGroup = Boolean(product.variants?.length);
+  const canStock = can(user, "stock", "view") && !isGroup;
   const [txns, channels] = await Promise.all([canStock ? recentTransactionsFor(id, 10) : [], channelsForProduct(id)]);
   const stock = product.stock ?? 0;
   const margin = product.sellingPrice - product.costPrice;
@@ -80,28 +85,48 @@ export async function ProductDetailPage({ params }: { params: Params }) {
     <div className="space-y-4">
       <DetailCard
         title={product.name}
-        subtitle={product.sku}
+        subtitle={product.parent ? `${product.sku} · Variant of ${product.parentName ?? "product"}` : product.sku}
         badge={<StatusBadge status={product.status} />}
         icon={<Package className="w-4.5 h-4.5" />}
-        backHref={PRODUCT_UI.basePath}
-        editHref={can(user, "product", "update") ? `${PRODUCT_UI.basePath}/${product._id}/edit` : undefined}
+        backHref={product.parent ? `${PRODUCT_UI.basePath}/${product.parent}` : PRODUCT_UI.basePath}
+        editHref={can(user, "product", "update") ? `${PRODUCT_UI.basePath}/${product.parent ?? product._id}/edit` : undefined}
       >
+        {(product.images?.length ?? 0) > 0 && <ProductGallery images={product.images ?? []} />}
         <DetailSection title="Stock">
           <DetailItem label="Available Stock" value={<span className="text-base font-black text-slate-900">{formatNumber(stock)}</span>} />
-          <DetailItem label="Stock Level" value={<StockLevelBadge level={stockLevel(stock, product.reorderLevel)} />} />
-          <DetailItem label="Reorder Level" value={formatNumber(product.reorderLevel)} />
-          <DetailItem label="Stock Value (at cost)" value={formatCurrency(stock * product.costPrice)} />
+          {isGroup ? (
+            <DetailItem label="Variants" value={`${product.variants?.length} — stock is kept per variant`} />
+          ) : (
+            <>
+              <DetailItem label="Stock Level" value={<StockLevelBadge level={stockLevel(stock, product.reorderLevel)} />} />
+              <DetailItem label="Reorder Level" value={formatNumber(product.reorderLevel)} />
+              <DetailItem label="Stock Value (at cost)" value={formatCurrency(stock * product.costPrice)} />
+            </>
+          )}
         </DetailSection>
 
         <DetailSection title="Product Details">
           <DetailItem label="SKU Code" value={product.sku} mono />
           <DetailItem label="Name" value={product.name} />
+          {product.parent && (
+            <DetailItem
+              label="Variant of"
+              value={
+                <Link href={`${PRODUCT_UI.basePath}/${product.parent}`} className="text-brand hover:underline">
+                  {product.parentName ?? "View product"}
+                </Link>
+              }
+            />
+          )}
+          {product.variantName && <DetailItem label="Variant / Size" value={product.variantName} />}
           <DetailItem label="Category" value={product.category} />
           <DetailItem label="Barcode" value={product.barcode} mono />
           <DetailItem label="Description" value={product.description} />
         </DetailSection>
 
+        {!isGroup && (
         <DetailSection title="Pricing">
+          <DetailItem label="MRP" value={product.mrp ? formatCurrency(product.mrp) : "—"} />
           <DetailItem label="Selling Price" value={formatCurrency(product.sellingPrice)} />
           <DetailItem label="Cost Price" value={formatCurrency(product.costPrice)} />
           <DetailItem
@@ -109,6 +134,7 @@ export async function ProductDetailPage({ params }: { params: Params }) {
             value={`${formatCurrency(margin)}${product.sellingPrice > 0 ? ` (${((margin / product.sellingPrice) * 100).toFixed(1)}%)` : ""}`}
           />
         </DetailSection>
+        )}
 
         <DetailSection title={`Marketplaces (${channels.length})`}>
           {channels.length === 0 ? (
@@ -136,6 +162,8 @@ export async function ProductDetailPage({ params }: { params: Params }) {
           <DetailItem label="Last Updated" value={formatDateTime(product.updatedAt)} />
         </DetailSection>
       </DetailCard>
+
+      {isGroup && <VariantTable variants={product.variants ?? []} />}
 
       {canStock && (
         <section className="bg-white border border-line rounded-xl p-4 space-y-3">

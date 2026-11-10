@@ -10,11 +10,16 @@ export const PERMISSION_GROUPS = [
   {
     title: "Catalog & Inventory",
     modules: [
-      { key: "product", label: "Products — create, edit, CSV import / export" },
+      { key: "product", label: "Products — create, edit, variants, images, CSV import / export" },
+      { key: "category", label: "Categories — product categories" },
       { key: "stock", label: "Inventory — stock update, CSV upload, adjustments, history" },
       { key: "material_request", label: "Material Requests — raise (create), approve / reject / receive into stock (update)" },
       { key: "channel", label: "Channels — marketplaces and their assigned products" },
     ],
+  },
+  {
+    title: "Production",
+    modules: [{ key: "production", label: "Batch Codes — manufacturing units, their batch codes and FSSAI licence, batch lookup" }],
   },
   {
     title: "Orders",

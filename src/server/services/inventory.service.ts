@@ -27,7 +27,8 @@ const LEVEL_SORTS: Record<string, Record<string, 1 | -1>> = {
  * Inactive products are included only when the status filter asks for them.
  */
 function inventoryPipeline(query: ListQuery): PipelineStage[] {
-  const match: Filter = {};
+  // A product with variants holds no stock: its variants are listed instead
+  const match: Filter = { hasVariants: { $ne: true } };
   if (query.status === "active" || query.status === "inactive") match.status = query.status;
   if (query.filters.category) match.category = query.filters.category;
   if (query.search) {
@@ -146,8 +147,9 @@ export async function inventorySummary(): Promise<InventorySummary> {
 
 async function loadProduct(id: string) {
   if (!isValidObjectId(id)) throw notFound("Product");
-  const p = await Product.findById(id).select("sku name status").lean();
+  const p = await Product.findById(id).select("sku name status hasVariants").lean();
   if (!p) throw notFound("Product");
+  if (p.hasVariants) throw new AppError(`${p.sku} has variants — update the stock of each variant instead`, 409);
   return p;
 }
 

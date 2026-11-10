@@ -187,12 +187,13 @@ async function buildOrder(input: OrderInput) {
   if (orderType === "MARKETPLACE" && !customerName) customerName = channelName;
 
   const ids = [...new Set(input.items.map((i) => i.product))];
-  const products = await Product.find({ _id: { $in: ids } }).select("sku name status").lean();
+  const products = await Product.find({ _id: { $in: ids } }).select("sku name status hasVariants").lean();
   const byId = new Map(products.map((p) => [String(p._id), p]));
   for (const id of ids) {
     const p = byId.get(id);
     if (!p) throw new AppError("A selected product no longer exists", 422);
     if (p.status !== "active") throw new AppError(`${p.sku} is inactive`, 422);
+    if (p.hasVariants) throw new AppError(`${p.sku} has variants — choose one of its variants`, 422);
   }
   if (channel) {
     const listed = await ChannelProduct.find({ channel, product: { $in: ids } }).select("product").lean();
@@ -318,7 +319,7 @@ export async function listOrderProductOptions(orderType: string, channelId?: str
         allocatedQty: l.allocatedQty ?? null,
       }));
   } else {
-    const products = await Product.find({ status: "active" }).select("sku name sellingPricePaise").lean();
+    const products = await Product.find({ status: "active", hasVariants: { $ne: true } }).select("sku name sellingPricePaise").lean();
     rows = products.map((p) => ({ _id: p._id, sku: p.sku, name: p.name, pricePaise: p.sellingPricePaise }));
   }
   const stock = await Inventory.find({ product: { $in: rows.map((r) => r._id) } }).select("product quantity").lean();

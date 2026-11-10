@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState, type ReactNode } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import type { FilterConfig } from "./types";
 
@@ -17,6 +17,8 @@ interface TableFilterBarProps {
   onToggleColumn: (key: string) => void;
   onShowAllColumns: () => void;
   total: number;
+  /** Extra toolbar button(s) before the column picker, e.g. Expand All */
+  actions?: ReactNode;
 }
 
 function TableFilterBarComponent({
@@ -31,6 +33,7 @@ function TableFilterBarComponent({
   onToggleColumn,
   onShowAllColumns,
   total,
+  actions,
 }: TableFilterBarProps) {
   const [term, setTerm] = useState(search);
   const debounced = useDebounce(term, 400);
@@ -97,6 +100,8 @@ function TableFilterBarComponent({
             </button>
           )}
         </div>
+
+        {actions && <div className="order-3 flex items-stretch border-t md:border-t-0 md:border-l border-line shrink-0">{actions}</div>}
 
         <div ref={pickerRef} className="order-3 hidden md:flex relative border-l border-line items-center px-3 bg-white shrink-0">
           <button

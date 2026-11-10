@@ -105,8 +105,9 @@ export const stockUploadIo: IoEntity<UploadRow> = {
     const txnDate = readDay(record.txnDate);
     const poNumber = String(record.poNumber ?? "").trim().slice(0, 60);
 
-    const product = await Product.findOne({ sku }).select("sku name status").lean();
+    const product = await Product.findOne({ sku }).select("sku name status hasVariants").lean();
     if (!product) throw new AppError(`SKU ${sku} not found — add the product first`);
+    if (product.hasVariants) throw new AppError(`${sku} has variants — use the variant SKU`);
     if (product.status !== "active") throw new AppError(`${sku} is inactive`);
 
     const po = poNumber ? ` · PO ${poNumber}` : "";
