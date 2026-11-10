@@ -12,6 +12,9 @@ type Guard = { module: PermissionModule; action: PermissionAction } | "authentic
 
 type Ctx<P> = { params: Promise<P> };
 
+/** API calls slower than this are logged as "[slow api]" (override with SLOW_API_MS). */
+const SLOW_MS = Number(process.env.SLOW_API_MS) || 500;
+
 /** Writes must come from this site (defence in depth on top of SameSite cookies). */
 function isCrossSiteWrite(req: NextRequest): boolean {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return false;
@@ -33,6 +36,16 @@ export function apiHandler<P = Record<string, never>>(
   handler: (args: { req: NextRequest; user: SessionUser; params: P }) => Promise<unknown>
 ) {
   return async (req: NextRequest, ctx: Ctx<P>) => {
+    const started = performance.now();
+    const res = await run(req, ctx);
+    const ms = Math.round(performance.now() - started);
+    // Server-Timing shows up in the browser's Network tab; slow calls are also written to the server log
+    res.headers.set("Server-Timing", `app;dur=${ms}`);
+    if (ms >= SLOW_MS) console.warn(`[slow api] ${req.method} ${req.nextUrl.pathname}${req.nextUrl.search} ${ms} ms (status ${res.status})`);
+    return res;
+  };
+
+  async function run(req: NextRequest, ctx: Ctx<P>): Promise<NextResponse> {
     try {
       if (isCrossSiteWrite(req)) throw new AppError("Cross-site request blocked", 403);
       await connectDB();
@@ -51,7 +64,7 @@ export function apiHandler<P = Record<string, never>>(
     } catch (error) {
       return errorResponse(error);
     }
-  };
+  }
 }
 
 /** Parses the JSON body and validates it with the shared Yup schema (unknown keys are stripped). */
