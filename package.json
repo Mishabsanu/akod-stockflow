@@ -8,15 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "seed": "node --env-file=.env.local scripts/seed.mjs"
+    "seed": "node --env-file=.env.local scripts/seed.mjs",
+    "prod": "next build && next start -p 3001"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "exceljs": "^4.4.0",
     "formik": "^2.4.9",
-    "html-to-image": "^1.11.13",
-    "jspdf": "^3.0.4",
     "lucide-react": "^1.56.0",
     "mongoose": "^9.11.2",
     "next": "16.3.6",

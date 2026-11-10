@@ -37,6 +37,8 @@ export function softDeletePlugin(schema: Schema, opts: { unique?: string[] } = {
     deletedPrimary: { type: Boolean, default: false },
     deletedValues: { type: Schema.Types.Mixed, default: null },
   });
+  // Recycle Bin listing: what the user deleted, newest first
+  schema.index({ deletedPrimary: 1, deletedAt: -1 });
   UNIQUE_FIELDS.set(schema, opts.unique ?? []);
 
   schema.pre(QUERY_OPS, { document: false, query: true }, function (this: Query<unknown, unknown>) {

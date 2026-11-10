@@ -115,7 +115,7 @@ export async function listRecycleBin(query: ListQuery, user: SessionUser): Promi
   const groups = await Promise.all(
     visible.map(async (e) => {
       const docs = await e.model
-        .find({ deletedAt: { $ne: null }, deletedPrimary: true })
+        .find({ deletedPrimary: true, deletedAt: { $ne: null } })
         .sort({ deletedAt: -1 })
         .limit(PER_TYPE_LIMIT)
         .lean<Doc[]>();
@@ -147,11 +147,12 @@ export async function listRecycleBin(query: ListQuery, user: SessionUser): Promi
 
 /** Entity of the record the user deleted in this batch. */
 async function primaryOf(batch: string) {
-  for (const e of ENTITIES) {
-    const d = await e.model.findOne({ deletedAt: { $ne: null }, deleteBatch: batch, deletedPrimary: true }).lean<Doc>();
-    if (d) return { e, d };
-  }
-  return null;
+  // All modules at once (indexed on deleteBatch) instead of one after another
+  const hits = await Promise.all(
+    ENTITIES.map((e) => e.model.findOne({ deleteBatch: batch, deletedAt: { $ne: null }, deletedPrimary: true }).lean<Doc>())
+  );
+  const i = hits.findIndex(Boolean);
+  return i === -1 ? null : { e: ENTITIES[i], d: hits[i]! };
 }
 
 /** Restores everything deleted in one action. Fails (nothing changed) if a unique value is taken meanwhile. */
@@ -172,7 +173,8 @@ export async function restoreFromBin(batch: string, user: SessionUser): Promise<
   }
 
   const restored: Record<string, string[]> = {};
-  for (const ent of ENTITIES) restored[ent.key] = await restoreBatchIn(ent.model, batch);
+  const results = await Promise.all(ENTITIES.map((ent) => restoreBatchIn(ent.model, batch)));
+  ENTITIES.forEach((ent, i) => (restored[ent.key] = results[i]));
 
   // Keep linked totals right after a restore
   if (e.key === "product" && d.parent) await Product.updateOne({ _id: d.parent }, { hasVariants: true });
@@ -195,6 +197,6 @@ export async function purgeFromBin(batch: string, user: SessionUser): Promise<vo
   const products = await Product.find({ deletedAt: { $ne: null }, deleteBatch: batch }).select("_id images").lean();
   if (products.length) await Inventory.deleteMany({ product: { $in: products.map((p) => p._id) } });
   const cats = await Category.find({ deletedAt: { $ne: null }, deleteBatch: batch }).select("image").lean();
-  for (const ent of ENTITIES) await purgeBatchIn(ent.model, batch);
+  await Promise.all(ENTITIES.map((ent) => purgeBatchIn(ent.model, batch)));
   await destroyDocuments([...products.flatMap((p) => p.images ?? []), ...cats.flatMap((c) => (c.image ? [c.image] : []))]);
 }

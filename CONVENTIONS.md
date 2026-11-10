@@ -89,7 +89,8 @@ navy rail, compact grid tables — plus a responsive layer so every screen works
 ## Commands
 
 ```
-npm run dev        # http://localhost:3000
+npm run dev        # development (hot reload) — each page compiles on first visit, so it feels slow
+npm run prod       # production build + server on http://localhost:3001 — 10–50× faster, use this day to day
 npm run typecheck
 npm run seed       # roles, admin + test user, default Cash / Bank accounts
 ```
