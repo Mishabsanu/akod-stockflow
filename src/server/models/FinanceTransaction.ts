@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import { INCOME_CATEGORIES, PAYMENT_METHODS, type IncomeCategory, type PaymentMethod } from "@/lib/financeTypes";
 
 /**
@@ -46,6 +47,9 @@ const FinanceTransactionSchema = new Schema<FinanceTransactionDoc>(
   },
   { timestamps: true }
 );
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+FinanceTransactionSchema.plugin(softDeletePlugin, {});
 
 export const FinanceTransaction: Model<FinanceTransactionDoc> =
   (models.FinanceTransaction as Model<FinanceTransactionDoc>) ||

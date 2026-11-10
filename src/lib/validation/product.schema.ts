@@ -48,6 +48,8 @@ export const productSchema = Yup.object({
   costPrice: rupees("Cost price"),
   reorderLevel: wholeNumber("Reorder level", 0).default(10),
   status: statusField,
+  /** Delivered free of charge (variants follow their product) */
+  freeDelivery: Yup.boolean().default(false),
   /** Photo gallery, first = cover. Left out (CSV import) = keep the saved photos. */
   images: Yup.array(documentItem).max(MAX_PRODUCT_IMAGES, `At most ${MAX_PRODUCT_IMAGES} photos`).default(undefined),
   /** Left out (CSV import) = keep the saved variants; [] removes them all. */
@@ -94,6 +96,7 @@ export const emptyProduct: ProductInput = {
   costPrice: 0,
   reorderLevel: 10,
   status: "active",
+  freeDelivery: false,
   images: [],
   variants: [],
 };

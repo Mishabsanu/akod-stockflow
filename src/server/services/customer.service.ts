@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../models/softDelete";
 import { isValidObjectId, Types } from "mongoose";
 import { SALE_STATUSES, type Customer, type CustomerKind } from "@/lib/commerceTypes";
 import { fromPaise } from "@/lib/money";
@@ -97,13 +98,12 @@ export async function updateCustomer(id: string, input: CustomerInput): Promise<
   return getCustomer(id);
 }
 
-export async function deleteCustomer(id: string): Promise<void> {
+export async function deleteCustomer(id: string, userId?: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Customer");
   if (await Order.exists({ customer: id })) {
     throw new AppError("This contact has orders. Set it to inactive instead.", 409);
   }
-  const res = await CustomerModel.deleteOne({ _id: id });
-  if (!res.deletedCount) throw notFound("Customer");
+  if (!(await softDelete(CustomerModel, { _id: id }, { batch: newDeleteBatch(), userId, primary: true }))) throw notFound("Customer");
 }
 
 /** Active contacts of one kind for the order form. */

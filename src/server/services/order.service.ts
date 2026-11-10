@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../models/softDelete";
 import { sellableOnChannel } from "./channelAllocation";
 import { isValidObjectId, Types } from "mongoose";
 import { ORDER_STATUSES, ORDER_TYPES, PAYMENT_STATUSES, type Order, type OrderType } from "@/lib/commerceTypes";
@@ -289,10 +290,10 @@ export async function updateOrder(id: string, input: OrderInput, user: SessionUs
   return maybeConfirm(id, Boolean(input.confirm), user);
 }
 
-export async function deleteOrder(id: string): Promise<void> {
+export async function deleteOrder(id: string, userId?: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Order");
-  const res = await OrderModel.deleteOne({ _id: id, status: "PENDING" });
-  if (!res.deletedCount) {
+  const deleted = await softDelete(OrderModel, { _id: id, status: "PENDING" }, { batch: newDeleteBatch(), userId, primary: true });
+  if (!deleted) {
     if (!(await OrderModel.exists({ _id: id }))) throw notFound("Order");
     throw new AppError("Only pending orders can be deleted. Cancel the order instead.", 409);
   }

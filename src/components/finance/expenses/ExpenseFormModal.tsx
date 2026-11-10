@@ -2,10 +2,11 @@
 
 import { Form, Formik } from "formik";
 import { Plus, Receipt } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FormSurface } from "@/components/forms/FormSurface";
 import { SelectField, TextAreaField, TextField } from "@/components/forms/FormikFields";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import { useApiSubmit } from "@/hooks/useApiSubmit";
 import type { Expense } from "@/lib/financeTypes";
 import { formatCurrency } from "@/lib/format";
@@ -13,7 +14,7 @@ import { todayIST } from "@/lib/indiaDate";
 import type { Option } from "@/lib/types";
 import { expenseSchema, type ExpenseInput } from "@/lib/validation/finance.schema";
 import { apiRequest } from "@/services/apiClient";
-import { EXPENSE_CATEGORY_OPTIONS, type AccountOption } from "../shared/financeUi";
+import { EXPENSE_CATEGORY_OPTIONS, FINANCE_PATHS, type AccountOption } from "../shared/financeUi";
 import { PaymentModeFields } from "../shared/PaymentModeFields";
 
 export interface ExpenseFormOptions {
@@ -22,8 +23,10 @@ export interface ExpenseFormOptions {
 }
 
 interface Props extends ExpenseFormOptions {
-  open: boolean;
-  onClose: () => void;
+  open?: boolean;
+  onClose?: () => void;
+  /** Full page (New / Edit Expense screens) instead of a modal */
+  page?: { backHref: string };
   /** Edit this expense; omit to create */
   expense?: Expense;
 }
@@ -47,30 +50,33 @@ function initial(expense?: Expense): ExpenseInput {
 }
 
 /** Create / edit an expense. On create, "Paid now" posts a payment made straight away (rest stays payable). */
-export function ExpenseFormModal({ open, onClose, expense, accounts, channels }: Props) {
+export function ExpenseFormModal({ open, onClose, expense, accounts, channels, page }: Props) {
+  const router = useRouter();
   const isEdit = Boolean(expense);
-  const onSubmit = useApiSubmit<ExpenseInput>({
+  const close = page ? () => router.push(page.backHref) : () => onClose?.();
+  const onSubmit = useApiSubmit<ExpenseInput, Expense>({
     request: (values) =>
-      isEdit ? apiRequest(`/api/finance/expenses/${expense!._id}`, "PUT", values) : apiRequest("/api/finance/expenses", "POST", values),
+      isEdit ? apiRequest<Expense>(`/api/finance/expenses/${expense!._id}`, "PUT", values) : apiRequest<Expense>("/api/finance/expenses", "POST", values),
     successMessage: isEdit ? "Expense updated" : "Expense saved",
-    onSuccess: onClose,
+    onSuccess: page ? undefined : onClose,
+    redirectTo: page ? (saved) => `${FINANCE_PATHS.expenses}/${saved?._id ?? expense?._id ?? ""}` : undefined,
   });
 
-  if (!open) return null;
+  if (!open && !page) return null;
 
   return (
     <Formik initialValues={initial(expense)} validationSchema={expenseSchema} onSubmit={onSubmit}>
       {({ isSubmitting, values }) => (
-        <Modal
-          open
-          onClose={onClose}
+        <FormSurface
+          page={page}
+          onClose={close}
           size="lg"
           title={isEdit ? `Edit ${expense!.expenseNo}` : "New Expense"}
           subtitle={isEdit ? `Paid so far ${formatCurrency(expense!.paid)} — record more from "Pay"` : "Rent, salary, packaging, marketplace fees …"}
           icon={<Receipt className="w-4 h-4" />}
           footer={
             <>
-              <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+              <Button variant="outline" onClick={close} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" form={FORM_ID} loading={isSubmitting}>
@@ -114,21 +120,21 @@ export function ExpenseFormModal({ open, onClose, expense, accounts, channels }:
               </div>
             )}
           </Form>
-        </Modal>
+        </FormSurface>
       )}
     </Formik>
   );
 }
 
-/** Header button that opens the create modal. */
-export function NewExpenseButton(props: ExpenseFormOptions) {
-  const [open, setOpen] = useState(false);
+/** Header button: opens the New Expense page. */
+export function NewExpenseButton() {
   return (
-    <>
-      <Button icon={<Plus className="w-4 h-4" />} onClick={() => setOpen(true)}>
-        New Expense
-      </Button>
-      <ExpenseFormModal {...props} open={open} onClose={() => setOpen(false)} />
-    </>
+    <Link
+      href={`${FINANCE_PATHS.expenses}/new`}
+      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-brand hover:bg-brand-dark text-white text-xs font-bold transition"
+    >
+      <Plus className="w-4 h-4" />
+      New Expense
+    </Link>
   );
 }

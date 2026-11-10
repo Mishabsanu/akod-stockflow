@@ -134,7 +134,7 @@ export function MrActions({ mr }: { mr: MaterialRequest }) {
     try {
       if (confirm.action === "delete") {
         await apiRequest(`${MR_UI.apiBase}/${mr._id}`, "DELETE");
-        toast.success("Request deleted");
+        toast.success("Request moved to the Recycle Bin");
         router.push(MR_UI.basePath);
       } else {
         await apiRequest(`${MR_UI.apiBase}/${mr._id}/status`, "POST", { action: confirm.action, reason });

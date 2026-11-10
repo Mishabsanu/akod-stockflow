@@ -21,7 +21,7 @@ const DUPLICATE_LABELS: Record<string, string> = {
   code: "This code already exists",
   sku: "This SKU already exists",
   barcode: "Another product already has this barcode",
-  batchCodes: "This batch code already belongs to another manufacturer",
+  batchCodes: "This batch number already belongs to another company",
   gstin: "Another record already has this GSTIN",
   // Compound unique indexes report their first field
   supplier: "This bill number is already entered for this supplier",

@@ -30,22 +30,12 @@ export const DOCUMENT_TYPES = [
 
 /** Cloudinary folders the upload API accepts. */
 export const DOCUMENT_FOLDERS = [
-  "running_orders",
-  "delivery_notes",
-  "return_notes",
-  "workers",
-  "cheques",
-  "leads",
-  "quotes",
   "expenses",
   "payments",
-  "leaves",
-  "productions",
   "stock",
   "products",
   "product_variants",
-  "checkups",
-  "audits",
+  "categories",
 ] as const;
 export type DocumentFolder = (typeof DOCUMENT_FOLDERS)[number];
 

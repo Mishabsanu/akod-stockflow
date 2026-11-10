@@ -68,7 +68,7 @@ export function BatchLookup() {
         <div className="bg-white border border-line rounded-2xl p-6 text-center">
           <SearchX className="w-8 h-8 mx-auto text-slate-300" />
           <p className="text-sm font-semibold text-slate-700 mt-2">No manufacturer found for “{state.searched}”</p>
-          <p className="text-xs text-slate-500">Check the code on the pack, or add it to a manufacturer under Manufacturers.</p>
+          <p className="text-xs text-slate-500">Check the code on the pack, or add it under Batch Numbers.</p>
         </div>
       )}
 

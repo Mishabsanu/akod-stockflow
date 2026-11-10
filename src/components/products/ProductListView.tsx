@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers } from "lucide-react";
+import { Layers, Truck } from "lucide-react";
 import { useMemo } from "react";
 import { stockLevel } from "@/components/inventory/StockLevelBadge";
 import { usePermission } from "@/components/providers/SessionProvider";
@@ -73,6 +73,12 @@ export function ProductListView({ data, categories }: { data: Paginated<Product>
             <span className="inline-flex items-center gap-2.5">
               <ProductThumb image={r.images?.[0]} size={34} />
               <span className="font-semibold text-slate-900 whitespace-normal">{r.name}</span>
+              {r.freeDelivery && (
+                <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 shrink-0">
+                  <Truck className="w-3 h-3" />
+                  Free Delivery
+                </span>
+              )}
               {r.variants?.length ? (
                 <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 shrink-0">
                   <Layers className="w-3 h-3" />
@@ -143,6 +149,15 @@ export function ProductListView({ data, categories }: { data: Paginated<Product>
     () => [
       STATUS_FILTER,
       { key: "category", allLabel: "All Categories", minWidth: "170px", options: categories.map((c) => ({ label: c, value: c })) },
+      {
+        key: "freeDelivery",
+        allLabel: "All Delivery",
+        minWidth: "150px",
+        options: [
+          { label: "Free Delivery", value: "yes" },
+          { label: "Paid Delivery", value: "no" },
+        ],
+      },
     ],
     [categories]
   );

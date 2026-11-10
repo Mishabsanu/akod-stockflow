@@ -17,7 +17,7 @@ export const PATCH = apiHandler<P>({ module: "channel", action: "update" }, asyn
   return setChannelStatus(params.id, status);
 });
 
-export const DELETE = apiHandler<P>({ module: "channel", action: "delete" }, async ({ params }) => {
-  await deleteChannel(params.id);
+export const DELETE = apiHandler<P>({ module: "channel", action: "delete" }, async ({ params, user }) => {
+  await deleteChannel(params.id, user._id);
   return { success: true };
 });

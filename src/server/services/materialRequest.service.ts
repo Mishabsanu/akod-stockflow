@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../models/softDelete";
 import { isValidObjectId, Types } from "mongoose";
 import { highestPriority, type MaterialRequest, type MrPriority, type MrStatus } from "@/lib/materialRequestTypes";
 import type { Paginated, SessionUser } from "@/lib/types";
@@ -134,7 +135,7 @@ export async function updateMaterialRequest(id: string, input: MaterialRequestIn
 export async function deleteMaterialRequest(id: string, user: SessionUser, canApprove: boolean): Promise<void> {
   const doc = await loadDoc(id);
   assertEditable(doc, user, canApprove);
-  await MrModel.deleteOne({ _id: doc._id, status: "PENDING" });
+  await softDelete(MrModel, { _id: doc._id, status: "PENDING" }, { batch: newDeleteBatch(), userId: user._id, primary: true });
 }
 
 const NEXT: Record<MrActionInput["action"], { from: MrStatus[]; to: MrStatus }> = {

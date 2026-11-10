@@ -15,12 +15,14 @@ interface RowActionsProps {
   deleteUrl?: string;
   entityLabel: string;
   itemName: string;
+  /** Recycle Bin: permanent delete wording */
+  permanent?: boolean;
 }
 
 const iconBtn = "p-1 rounded text-slate-400 transition-colors";
 
 /** View / edit / delete buttons; only rendered for the actions the caller passes in. */
-export function RowActions({ viewHref, editHref, deleteUrl, entityLabel, itemName }: RowActionsProps) {
+export function RowActions({ viewHref, editHref, deleteUrl, entityLabel, itemName, permanent }: RowActionsProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -30,7 +32,7 @@ export function RowActions({ viewHref, editHref, deleteUrl, entityLabel, itemNam
     setDeleting(true);
     try {
       await apiRequest(deleteUrl, "DELETE");
-      toast.success(`${entityLabel} deleted`);
+      toast.success(permanent ? `${entityLabel} deleted forever` : `${entityLabel} moved to the Recycle Bin`);
       setConfirmOpen(false);
       router.refresh();
     } catch (error) {
@@ -56,7 +58,7 @@ export function RowActions({ viewHref, editHref, deleteUrl, entityLabel, itemNam
         <button
           type="button"
           onClick={() => setConfirmOpen(true)}
-          title={`Delete ${entityLabel}`}
+          title={permanent ? `Delete ${entityLabel} forever` : `Delete ${entityLabel}`}
           className={`${iconBtn} hover:text-red-600 hover:bg-red-50`}
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -69,6 +71,7 @@ export function RowActions({ viewHref, editHref, deleteUrl, entityLabel, itemNam
         loading={deleting}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={handleDelete}
+        permanent={permanent}
       />
     </div>
   );

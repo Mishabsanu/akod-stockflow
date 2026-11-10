@@ -11,14 +11,16 @@ interface ConfirmDeleteModalProps {
   loading?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  /** Recycle Bin "Delete forever": cannot be undone */
+  permanent?: boolean;
 }
 
-export function ConfirmDeleteModal({ open, entityLabel, itemName, loading, onCancel, onConfirm }: ConfirmDeleteModalProps) {
+export function ConfirmDeleteModal({ open, entityLabel, itemName, loading, onCancel, onConfirm, permanent }: ConfirmDeleteModalProps) {
   return (
     <Modal
       open={open}
       onClose={onCancel}
-      title={`Delete ${entityLabel}?`}
+      title={permanent ? `Delete ${entityLabel} forever?` : `Delete ${entityLabel}?`}
       size="sm"
       icon={<Trash2 className="w-4 h-4" />}
       footer={
@@ -27,7 +29,7 @@ export function ConfirmDeleteModal({ open, entityLabel, itemName, loading, onCan
             Cancel
           </Button>
           <Button variant="danger" onClick={onConfirm} loading={loading}>
-            Yes, Delete
+            {permanent ? "Yes, Delete Forever" : "Yes, Delete"}
           </Button>
         </>
       }
@@ -35,9 +37,16 @@ export function ConfirmDeleteModal({ open, entityLabel, itemName, loading, onCan
       <div className="flex gap-3 text-xs text-slate-600">
         <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
         <div className="space-y-2">
-          <p>
-            Are you sure you want to delete this {entityLabel.toLowerCase()}? This action cannot be undone.
-          </p>
+          {permanent ? (
+            <p>
+              This permanently removes this {entityLabel.toLowerCase()} and anything deleted with it. <b>This cannot be undone.</b>
+            </p>
+          ) : (
+            <p>
+              Delete this {entityLabel.toLowerCase()}? It moves to the <b>Recycle Bin</b> (Settings → Recycle Bin), where it can be
+              restored.
+            </p>
+          )}
           {itemName && (
             <p className="font-mono font-bold text-slate-800 bg-slate-100 border border-slate-200 rounded px-2 py-1 inline-block">
               {itemName}

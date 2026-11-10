@@ -3,6 +3,7 @@
 import { Edit2, Plus } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { ProductThumb } from "@/components/products/ProductImages";
 import { usePermission } from "@/components/providers/SessionProvider";
 import { DataTable } from "@/components/table/DataTable";
 import { RowActions } from "@/components/table/RowActions";
@@ -40,7 +41,16 @@ export function CategoryListView({ data }: { data: Paginated<Category> }) {
 
   const columns = useMemo<Column<Category>[]>(
     () => [
-      { key: "name", label: "Category", render: (c) => <span className="font-semibold text-slate-900">{c.name}</span> },
+      {
+        key: "name",
+        label: "Category",
+        render: (c) => (
+          <span className="inline-flex items-center gap-2.5">
+            <ProductThumb image={c.image} size={34} />
+            <span className="font-semibold text-slate-900">{c.name}</span>
+          </span>
+        ),
+      },
       { key: "description", label: "Description", render: (c) => <span className="whitespace-normal">{c.description || "—"}</span> },
       {
         key: "productCount",

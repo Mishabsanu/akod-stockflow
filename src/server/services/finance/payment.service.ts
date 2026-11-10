@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../../models/softDelete";
 import { isValidObjectId, Types } from "mongoose";
 import { SALE_STATUSES } from "@/lib/commerceTypes";
 import { PAYMENT_METHODS, type Payment as PaymentRow, type PaymentMethod, type PaymentRefType } from "@/lib/financeTypes";
@@ -113,14 +114,14 @@ export async function createPayment(input: PaymentInput, userId: string): Promis
 }
 
 /** Deleting a payment re-opens the order / expense balance it settled. */
-export async function deletePayment(id: string): Promise<void> {
+export async function deletePayment(id: string, userId?: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Payment");
   const doc = await Payment.findById(id).lean();
   if (!doc) throw notFound("Payment");
   if (doc.referenceType === "INCOME") {
     throw new AppError("This payment belongs to an income entry. Delete the income entry instead.", 409);
   }
-  await Payment.deleteOne({ _id: doc._id });
+  await softDelete(Payment, { _id: doc._id }, { batch: newDeleteBatch(), userId, primary: true });
   await recomputeFor(doc.referenceType, doc.referenceId);
 }
 

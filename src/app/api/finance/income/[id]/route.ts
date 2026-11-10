@@ -3,7 +3,7 @@ import { deleteIncome, getIncome } from "@/server/services/finance/income.servic
 
 export const GET = apiHandler<{ id: string }>({ module: "income", action: "view" }, async ({ params }) => getIncome(params.id));
 
-export const DELETE = apiHandler<{ id: string }>({ module: "income", action: "delete" }, async ({ params }) => {
-  await deleteIncome(params.id);
+export const DELETE = apiHandler<{ id: string }>({ module: "income", action: "delete" }, async ({ params, user }) => {
+  await deleteIncome(params.id, user._id);
   return { success: true };
 });

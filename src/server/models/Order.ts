@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import { ORDER_STATUSES, ORDER_TYPES, PAYMENT_STATUSES, type OrderStatus, type OrderType, type PaymentStatus } from "@/lib/commerceTypes";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/financeTypes";
 
@@ -124,5 +125,8 @@ const OrderSchema = new Schema<OrderDoc>(
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ "items.product": 1 });
 OrderSchema.index({ orderReference: 1 });
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+OrderSchema.plugin(softDeletePlugin, {});
 
 export const Order: Model<OrderDoc> = (models.Order as Model<OrderDoc>) || model<OrderDoc>("Order", OrderSchema);

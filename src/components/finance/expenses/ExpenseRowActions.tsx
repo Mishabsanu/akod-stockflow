@@ -14,7 +14,7 @@ import { formatCurrency } from "@/lib/format";
 import { apiRequest, ApiError } from "@/services/apiClient";
 import { RecordPaymentModal } from "../payments/RecordPaymentModal";
 import { FINANCE_PATHS } from "../shared/financeUi";
-import { ExpenseFormModal, type ExpenseFormOptions } from "./ExpenseFormModal";
+import type { ExpenseFormOptions } from "./ExpenseFormModal";
 
 const iconBtn = "p-1 rounded text-slate-400 transition-colors";
 
@@ -35,7 +35,6 @@ export function ExpenseRowActions({
   const canEdit = usePermission("expense", "update");
   const canDelete = usePermission("expense", "delete");
   const canPay = usePermission("payment", "create");
-  const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState<"cancel" | "delete" | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -66,9 +65,9 @@ export function ExpenseRowActions({
         </Link>
       )}
       {canEdit && expense.status !== "CANCELLED" && (
-        <button type="button" onClick={() => setEditing(true)} title="Edit expense" className={`${iconBtn} hover:text-brand hover:bg-brand-light`}>
+        <Link href={`${FINANCE_PATHS.expenses}/${expense._id}/edit`} title="Edit expense" className={`${iconBtn} hover:text-brand hover:bg-brand-light`}>
           <Edit2 className="w-3.5 h-3.5" />
-        </button>
+        </Link>
       )}
       {canPay && open && (
         <RecordPaymentModal
@@ -99,7 +98,6 @@ export function ExpenseRowActions({
         </button>
       )}
 
-      <ExpenseFormModal {...options} open={editing} onClose={() => setEditing(false)} expense={expense} />
       <ConfirmDeleteModal
         open={confirm === "delete"}
         entityLabel="Expense"

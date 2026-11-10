@@ -8,7 +8,7 @@ export const PUT = apiHandler<{ id: string }>({ module: "customer", action: "upd
   updateCustomer(params.id, await readBody(req, customerSchema))
 );
 
-export const DELETE = apiHandler<{ id: string }>({ module: "customer", action: "delete" }, async ({ params }) => {
-  await deleteCustomer(params.id);
+export const DELETE = apiHandler<{ id: string }>({ module: "customer", action: "delete" }, async ({ params, user }) => {
+  await deleteCustomer(params.id, user._id);
   return { success: true };
 });

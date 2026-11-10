@@ -10,7 +10,7 @@ export const PUT = apiHandler<{ id: string }>({ module: "expense", action: "upda
   updateExpense(params.id, await readBody(req, expenseSchema))
 );
 
-export const DELETE = apiHandler<{ id: string }>({ module: "expense", action: "delete" }, async ({ params }) => {
-  await deleteExpense(params.id);
+export const DELETE = apiHandler<{ id: string }>({ module: "expense", action: "delete" }, async ({ params, user }) => {
+  await deleteExpense(params.id, user._id);
   return { success: true };
 });

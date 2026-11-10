@@ -24,6 +24,7 @@ function toInput(p: Product): ProductInput {
     costPrice: p.costPrice,
     reorderLevel: p.reorderLevel,
     status: p.status,
+    freeDelivery: Boolean(p.freeDelivery),
   };
 }
 
@@ -44,7 +45,7 @@ export const productsIo: IoEntity<Product> = {
   requiredField: "sku",
   // Each product row is followed by its variant rows
   rows: (params) =>
-    listProducts({ ...parseListQuery(params, ["category"]), ...ALL }).then((p) =>
+    listProducts({ ...parseListQuery(params, ["category", "freeDelivery"]), ...ALL }).then((p) =>
       p.items.flatMap((item) => [item, ...(item.variants ?? []).map((v) => ({ ...v, parentSku: item.sku }))])
     ),
   columns: [
@@ -60,6 +61,7 @@ export const productsIo: IoEntity<Product> = {
     { header: "Cost Price", field: "costPrice", value: (p) => p.costPrice, numeric: true, width: 14, aliases: ["cost", "cp"] },
     { header: "Reorder Level", field: "reorderLevel", value: (p) => p.reorderLevel, numeric: true, width: 14, aliases: ["lowstock", "minstock"] },
     { header: "Status", field: "status", value: (p) => p.status, width: 10 },
+    { header: "Free Delivery", field: "freeDelivery", value: (p) => (p.freeDelivery ? "Yes" : "No"), width: 13, aliases: ["freeshipping"] },
     { header: "Stock", value: (p) => p.stock ?? 0, width: 10 },
   ],
   async importRow(record, user, ctx) {
@@ -75,7 +77,14 @@ export const productsIo: IoEntity<Product> = {
     try {
       const base = existing ? toInput(existing) : { status: "active" };
       input = await productSchema.validate(
-        { ...base, ...record, sku, status: readStatus(record.status) ?? base.status },
+        {
+          ...base,
+          ...record,
+          sku,
+          status: readStatus(record.status) ?? base.status,
+          // "Yes" / "No" in the sheet (blank keeps the saved value)
+          freeDelivery: record.freeDelivery === undefined ? (base as ProductInput).freeDelivery ?? false : readStatus(record.freeDelivery) === "active",
+        },
         { stripUnknown: true }
       );
     } catch (e) {

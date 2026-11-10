@@ -6,12 +6,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { readRange, thisMonth } from "@/lib/dateRange";
 import { can } from "@/lib/permissions";
 import { getPageAccess } from "@/server/auth/session";
-import { listAccountOptions, listAccounts } from "@/server/services/finance/account.service";
+import { getAccount, listAccountOptions, listAccounts } from "@/server/services/finance/account.service";
 import { getLedger } from "@/server/services/finance/ledger.service";
 import { orNotFound } from "@/server/utils/pageData";
 import { DateRangeFilter } from "../shared/DateRangeFilter";
 import { FINANCE_PATHS } from "../shared/financeUi";
-import { NewAccountButton } from "./AccountFormModal";
+import { AccountFormModal, NewAccountButton } from "./AccountFormModal";
 import { AccountListView } from "./AccountListView";
 import { LedgerAccountSelect, LedgerView } from "./LedgerView";
 
@@ -67,4 +67,19 @@ export async function LedgerPage({ searchParams }: { searchParams: SearchParams 
       <LedgerView ledger={ledger} />
     </>
   );
+}
+
+/** New Account — full page. */
+export async function AccountCreatePage() {
+  const { allowed } = await getPageAccess("account", "create");
+  if (!allowed) return <AccessDenied />;
+  return <AccountFormModal page={{ backHref: FINANCE_PATHS.accounts }} />;
+}
+
+/** Edit Account — full page. */
+export async function AccountEditPage({ params }: { params: Promise<{ id: string }> }) {
+  const { allowed } = await getPageAccess("account", "update");
+  if (!allowed) return <AccessDenied />;
+  const account = await orNotFound(getAccount((await params).id));
+  return <AccountFormModal account={account} page={{ backHref: FINANCE_PATHS.accounts }} />;
 }

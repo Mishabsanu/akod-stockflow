@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../../models/softDelete";
 import { isValidObjectId, Types } from "mongoose";
 import type { AccountType, FinanceAccount } from "@/lib/financeTypes";
 import { fromPaise, toPaise } from "@/lib/money";
@@ -85,14 +86,14 @@ export async function updateAccount(id: string, input: AccountInput): Promise<Fi
   return getAccount(id);
 }
 
-export async function deleteAccount(id: string): Promise<void> {
+export async function deleteAccount(id: string, userId?: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Account");
   const existing = await Account.findById(id).select("_id").lean();
   if (!existing) throw notFound("Account");
   if (await Payment.exists({ account: existing._id })) {
     throw new AppError("This account has payments. Set it to inactive instead.", 409);
   }
-  await Account.deleteOne({ _id: id });
+  await softDelete(Account, { _id: id }, { batch: newDeleteBatch(), userId, primary: true });
 }
 
 /** Active accounts for payment forms. */

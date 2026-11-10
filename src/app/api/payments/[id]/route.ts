@@ -3,7 +3,7 @@ import { deletePayment, getPayment } from "@/server/services/finance/payment.ser
 
 export const GET = apiHandler<{ id: string }>({ module: "payment", action: "view" }, async ({ params }) => getPayment(params.id));
 
-export const DELETE = apiHandler<{ id: string }>({ module: "payment", action: "delete" }, async ({ params }) => {
-  await deletePayment(params.id);
+export const DELETE = apiHandler<{ id: string }>({ module: "payment", action: "delete" }, async ({ params, user }) => {
+  await deletePayment(params.id, user._id);
   return { success: true };
 });

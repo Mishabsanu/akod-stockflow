@@ -8,7 +8,7 @@ import { parseListQuery } from "@/server/http/query";
 import { listAccountOptions } from "@/server/services/finance/account.service";
 import { INCOME_FILTERS, listIncome } from "@/server/services/finance/income.service";
 import { DateRangeFilter } from "../shared/DateRangeFilter";
-import { IncomeFormModal } from "./IncomeFormModal";
+import { IncomeForm, IncomeFormModal } from "./IncomeFormModal";
 import { IncomeListView } from "./IncomeListView";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -17,7 +17,7 @@ export async function IncomeListPage({ searchParams }: { searchParams: SearchPar
   const { user, allowed } = await getPageAccess("income", "view");
   if (!allowed) return <AccessDenied />;
   const query = parseListQuery(await searchParams, INCOME_FILTERS);
-  const [data, accounts] = await Promise.all([listIncome(query), can(user, "income", "create") ? listAccountOptions() : []]);
+  const data = await listIncome(query);
 
   return (
     <>
@@ -27,7 +27,7 @@ export async function IncomeListPage({ searchParams }: { searchParams: SearchPar
         actions={
           <>
             <ImportExport entity="income" title="Income" />
-            {can(user, "income", "create") && <IncomeFormModal accounts={accounts} />}
+            {can(user, "income", "create") && <IncomeFormModal />}
           </>
         }
       />
@@ -41,4 +41,11 @@ export async function IncomeListPage({ searchParams }: { searchParams: SearchPar
       <IncomeListView data={data} />
     </>
   );
+}
+
+/** Add Other Income — full page. */
+export async function IncomeCreatePage() {
+  const { allowed } = await getPageAccess("income", "create");
+  if (!allowed) return <AccessDenied />;
+  return <IncomeForm accounts={await listAccountOptions()} />;
 }

@@ -10,14 +10,14 @@ import { can } from "@/lib/permissions";
 import { getPageAccess } from "@/server/auth/session";
 import { parseListQuery } from "@/server/http/query";
 import { listAccountOptions } from "@/server/services/finance/account.service";
-import { EXPENSE_FILTERS, getExpenseWithPayments, listChannelOptions, listExpenses } from "@/server/services/finance/expense.service";
+import { EXPENSE_FILTERS, getExpense, getExpenseWithPayments, listChannelOptions, listExpenses } from "@/server/services/finance/expense.service";
 import { orNotFound } from "@/server/utils/pageData";
 import { PaymentHistory } from "../payments/PaymentHistory";
 import { DateRangeFilter } from "../shared/DateRangeFilter";
 import { ExpenseStatusBadge, methodLabel } from "../shared/FinanceBadges";
 import { FINANCE_PATHS } from "../shared/financeUi";
 import { MoneyTile } from "../shared/FinanceWidgets";
-import { NewExpenseButton } from "./ExpenseFormModal";
+import { ExpenseFormModal, NewExpenseButton } from "./ExpenseFormModal";
 import { ExpenseListView } from "./ExpenseListView";
 import { ExpenseRowActions } from "./ExpenseRowActions";
 
@@ -42,7 +42,7 @@ export async function ExpenseListPage({ searchParams }: { searchParams: SearchPa
         actions={
           <>
             <ImportExport entity="expenses" title="Expenses" />
-            {can(user, "expense", "create") && <NewExpenseButton {...options} />}
+            {can(user, "expense", "create") && <NewExpenseButton />}
           </>
         }
       />
@@ -101,4 +101,21 @@ export async function ExpenseDetailPage({
       <PaymentHistory payments={payments} title="Payments made" emptyText={`Nothing paid yet — ${formatCurrency(expense.balance)} is due.`} />
     </div>
   );
+}
+
+/** New Expense — full page. */
+export async function ExpenseCreatePage() {
+  const { allowed } = await getPageAccess("expense", "create");
+  if (!allowed) return <AccessDenied />;
+  const options = await formOptions();
+  return <ExpenseFormModal {...options} page={{ backHref: FINANCE_PATHS.expenses }} />;
+}
+
+/** Edit Expense — full page. */
+export async function ExpenseEditPage({ params }: { params: Promise<{ id: string }> }) {
+  const { allowed } = await getPageAccess("expense", "update");
+  if (!allowed) return <AccessDenied />;
+  const { id } = await params;
+  const [expense, options] = await Promise.all([orNotFound(getExpense(id)), formOptions()]);
+  return <ExpenseFormModal {...options} expense={expense} page={{ backHref: `${FINANCE_PATHS.expenses}/${id}` }} />;
 }

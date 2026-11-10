@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import { EXPENSE_CATEGORIES, PAYMENT_METHODS, type ExpenseCategory, type ExpenseStatus, type PaymentMethod } from "@/lib/financeTypes";
 
 /** Business expense. paid / balance / status are recalculated from linked "MADE" payments (settlement.ts). */
@@ -45,5 +46,8 @@ const ExpenseSchema = new Schema<ExpenseDoc>(
   },
   { timestamps: true }
 );
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+ExpenseSchema.plugin(softDeletePlugin, {});
 
 export const Expense: Model<ExpenseDoc> = (models.Expense as Model<ExpenseDoc>) || model<ExpenseDoc>("Expense", ExpenseSchema);

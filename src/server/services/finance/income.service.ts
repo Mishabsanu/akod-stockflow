@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../../models/softDelete";
 import { isValidObjectId } from "mongoose";
 import type { OrderStatus, PaymentStatus } from "@/lib/commerceTypes";
 import { INCOME_CATEGORIES, type Income, type PaymentMethod } from "@/lib/financeTypes";
@@ -115,13 +116,15 @@ export async function createOtherIncome(input: IncomeInput, userId: string): Pro
 }
 
 /** Only manual income can be deleted (order income follows its order). Its payment goes with it. */
-export async function deleteIncome(id: string): Promise<void> {
+export async function deleteIncome(id: string, userId?: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Income");
   const doc = await FinanceTransaction.findById(id).lean();
   if (!doc) throw notFound("Income");
   if (doc.source === "ORDER") {
     throw new AppError("Order income is managed by its order — cancel or return the order instead.", 409);
   }
-  await Payment.deleteMany({ referenceType: "INCOME", referenceId: doc._id });
-  await FinanceTransaction.deleteOne({ _id: doc._id });
+  // One batch: restoring the income from the Recycle Bin brings its payment back too
+  const batch = newDeleteBatch();
+  await softDelete(Payment, { referenceType: "INCOME", referenceId: doc._id }, { batch, userId });
+  await softDelete(FinanceTransaction, { _id: doc._id }, { batch, userId, primary: true });
 }

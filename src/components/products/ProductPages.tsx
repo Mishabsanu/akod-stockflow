@@ -30,7 +30,7 @@ type Params = Promise<{ id: string }>;
 export async function ProductListPage({ searchParams }: { searchParams: SearchParams }) {
   const { user, allowed } = await getPageAccess("product", "view");
   if (!allowed) return <AccessDenied />;
-  const [data, categories] = await Promise.all([listProducts(parseListQuery(await searchParams, ["category"])), listCategories()]);
+  const [data, categories] = await Promise.all([listProducts(parseListQuery(await searchParams, ["category", "freeDelivery"])), listCategories()]);
 
   return (
     <div className="space-y-4">

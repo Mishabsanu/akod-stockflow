@@ -14,7 +14,7 @@ import { BatchCodesField } from "./BatchCodesField";
 
 const api = resourceApi<Manufacturer>("/api/manufacturers");
 
-/** Create / edit a manufacturing unit. `manufacturer` = null → closed; "new" → create. */
+/** Create / edit a batch-number record (company, address, FSSAI). `manufacturer` = null → closed; "new" → create. */
 export function ManufacturerFormModal({ manufacturer, onClose }: { manufacturer: Manufacturer | "new" | null; onClose: () => void }) {
   const router = useRouter();
   if (!manufacturer) return null;
@@ -38,7 +38,7 @@ export function ManufacturerFormModal({ manufacturer, onClose }: { manufacturer:
       onSubmit={async (values, helpers) => {
         try {
           const saved = editing ? await api.update(editing._id, values) : await api.create(values);
-          toast.success(editing ? "Manufacturer updated" : `${saved.name} added`);
+          toast.success(editing ? "Batch number updated" : `Saved for ${saved.name}`);
           onClose();
           router.refresh();
         } catch (e) {
@@ -53,8 +53,8 @@ export function ManufacturerFormModal({ manufacturer, onClose }: { manufacturer:
         <Modal
           open
           onClose={onClose}
-          title={editing ? "Edit Manufacturer" : "New Manufacturer"}
-          subtitle="The unit that made the pack, and the batch codes printed on its packs"
+          title={editing ? "Edit Batch Number" : "New Batch Number"}
+          subtitle="Batch number on the pack, with the FSSAI licence, company and address that made it"
           icon={<Factory className="w-4 h-4" />}
           size="md"
           footer={
@@ -63,18 +63,27 @@ export function ManufacturerFormModal({ manufacturer, onClose }: { manufacturer:
                 Cancel
               </Button>
               <Button onClick={submitForm} loading={isSubmitting}>
-                {editing ? "Save Changes" : "Add Manufacturer"}
+                {editing ? "Save Changes" : "Save"}
               </Button>
             </>
           }
         >
           <Form noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <BatchCodesField />
+            <TextField
+              name="fssaiLicNo"
+              label="FSSAI Lic. No."
+              required
+              placeholder="14 digits"
+              inputMode="numeric"
+              maxLength={14}
+              className="sm:col-span-2 [&_input]:font-mono"
+            />
             <TextField
               name="name"
-              label="Manufacturer Name"
+              label="Company Name"
               required
               placeholder="e.g. AKOD Foods Private Limited"
-              autoFocus
               maxLength={150}
               className="sm:col-span-2"
             />
@@ -86,18 +95,6 @@ export function ManufacturerFormModal({ manufacturer, onClose }: { manufacturer:
               maxLength={500}
               className="sm:col-span-2"
             />
-            <TextField
-              name="fssaiLicNo"
-              label="FSSAI Lic. No."
-              required
-              placeholder="14 digits"
-              inputMode="numeric"
-              maxLength={14}
-              className="[&_input]:font-mono"
-            />
-            <TextField name="phone" label="Phone" placeholder="Optional" inputMode="tel" />
-            <BatchCodesField />
-            <TextAreaField name="notes" label="Notes" placeholder="Optional, staff only" rows={2} className="sm:col-span-2" />
             <SelectField name="status" label="Status" required options={STATUS_OPTIONS} hint="Inactive = not found in lookup" />
           </Form>
         </Modal>

@@ -34,6 +34,8 @@ interface DocumentListProps {
   /** Button text, e.g. "Upload Proof" */
   uploadLabel?: string;
   emptyText?: string;
+  /** Expiry date per file (not used in this app yet; accepted so shared callers type-check) */
+  withExpiry?: boolean;
 }
 
 /** File picker + list of attached files (open in a new tab, remove). Proofs are images or PDFs. */

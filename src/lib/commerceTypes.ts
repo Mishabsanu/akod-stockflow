@@ -31,6 +31,8 @@ export interface Product {
   variantName?: string;
   /** True on a product whose stock and sales are kept on its variants */
   hasVariants?: boolean;
+  /** Delivered free of charge */
+  freeDelivery?: boolean;
   /** Variants of this product (list and detail pages) */
   variants?: Product[];
   /** Variant detail page: the parent's name */
@@ -46,6 +48,8 @@ export interface Category {
   name: string;
   description?: string;
   status: RecordStatus;
+  /** Optional photo */
+  image?: ProductImage | null;
   /** Products (not counting variants) in this category */
   productCount?: number;
   createdAt?: string;

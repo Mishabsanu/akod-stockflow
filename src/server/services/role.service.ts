@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../models/softDelete";
 import { invalidateSessionCache } from "../auth/session";
 import { isValidObjectId, type Types } from "mongoose";
 import {
@@ -132,7 +133,7 @@ export async function updateRole(id: string, input: RoleInput): Promise<Role> {
   return toRole(doc, userCount);
 }
 
-export async function deleteRole(id: string): Promise<void> {
+export async function deleteRole(id: string, userId?: string): Promise<void> {
   invalidateSessionCache();
   const existing = await findRole(id);
   if (existing.isSuperAdmin) {
@@ -142,8 +143,7 @@ export async function deleteRole(id: string): Promise<void> {
   if (assigned > 0) {
     throw new AppError(`${assigned} user(s) still have this role. Reassign them first.`, 409);
   }
-  const deleted = await RoleModel.findByIdAndDelete(id);
-  if (!deleted) throw notFound("Role");
+  if (!(await softDelete(RoleModel, { _id: id }, { batch: newDeleteBatch(), userId, primary: true }))) throw notFound("Role");
 }
 
 /** Active roles for dropdowns. `includeInactive` is for list filters (inactive ones are labelled). */

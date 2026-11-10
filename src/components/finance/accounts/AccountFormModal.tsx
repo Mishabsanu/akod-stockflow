@@ -2,14 +2,16 @@
 
 import { Form, Formik, useFormikContext } from "formik";
 import { Landmark, Plus } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FormSurface } from "@/components/forms/FormSurface";
 import { SelectField, STATUS_OPTIONS, TextField } from "@/components/forms/FormikFields";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import { useApiSubmit } from "@/hooks/useApiSubmit";
 import type { FinanceAccount } from "@/lib/financeTypes";
 import { accountSchema, type AccountInput } from "@/lib/validation/finance.schema";
 import { apiRequest } from "@/services/apiClient";
+import { FINANCE_PATHS } from "../shared/financeUi";
 
 const FORM_ID = "account-form";
 
@@ -26,14 +28,28 @@ function DefaultCheckbox() {
   );
 }
 
-export function AccountFormModal({ account, open, onClose }: { account?: FinanceAccount; open: boolean; onClose: () => void }) {
+/** Create / edit a cash or bank account — as a full page (`page`) or a modal. */
+export function AccountFormModal({
+  account,
+  open,
+  onClose,
+  page,
+}: {
+  account?: FinanceAccount;
+  open?: boolean;
+  onClose?: () => void;
+  page?: { backHref: string };
+}) {
+  const router = useRouter();
   const isEdit = Boolean(account);
+  const close = page ? () => router.push(page.backHref) : () => onClose?.();
   const onSubmit = useApiSubmit<AccountInput>({
     request: (values) => (isEdit ? apiRequest(`/api/finance/accounts/${account!._id}`, "PUT", values) : apiRequest("/api/finance/accounts", "POST", values)),
     successMessage: isEdit ? "Account updated" : "Account created",
-    onSuccess: onClose,
+    onSuccess: page ? undefined : onClose,
+    redirectTo: page?.backHref,
   });
-  if (!open) return null;
+  if (!open && !page) return null;
 
   const initialValues: AccountInput = {
     code: account?.code ?? "",
@@ -48,15 +64,15 @@ export function AccountFormModal({ account, open, onClose }: { account?: Finance
   return (
     <Formik initialValues={initialValues} validationSchema={accountSchema} onSubmit={onSubmit}>
       {({ isSubmitting }) => (
-        <Modal
-          open
-          onClose={onClose}
+        <FormSurface
+          page={page}
+          onClose={close}
           title={isEdit ? `Edit ${account!.name}` : "New Account"}
           subtitle="Cash in hand, bank account, UPI wallet …"
           icon={<Landmark className="w-4 h-4" />}
           footer={
             <>
-              <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+              <Button variant="outline" onClick={close} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" form={FORM_ID} loading={isSubmitting}>
@@ -82,20 +98,21 @@ export function AccountFormModal({ account, open, onClose }: { account?: Finance
             <TextField name="description" label="Description" maxLength={200} />
             <DefaultCheckbox />
           </Form>
-        </Modal>
+        </FormSurface>
       )}
     </Formik>
   );
 }
 
+/** Header button: opens the New Account page. */
 export function NewAccountButton() {
-  const [open, setOpen] = useState(false);
   return (
-    <>
-      <Button icon={<Plus className="w-4 h-4" />} onClick={() => setOpen(true)}>
-        New Account
-      </Button>
-      <AccountFormModal open={open} onClose={() => setOpen(false)} />
-    </>
+    <Link
+      href={`${FINANCE_PATHS.accounts}/new`}
+      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-brand hover:bg-brand-dark text-white text-xs font-bold transition"
+    >
+      <Plus className="w-4 h-4" />
+      New Account
+    </Link>
   );
 }

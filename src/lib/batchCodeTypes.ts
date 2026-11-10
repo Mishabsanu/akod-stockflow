@@ -26,12 +26,14 @@ export interface BatchLookupResult {
   manufacturer: Manufacturer;
 }
 
-export const BATCH_CODE_PATTERN = /^[A-Z0-9]{1,10}$/;
+/** Letters, numbers and - / . (no spaces), up to 30, e.g. 27 or AK-2611-B01 */
+export const BATCH_CODE_PATTERN = /^[A-Z0-9][A-Z0-9\-/.]{0,29}$/;
 
 /** "27, 28 29;30" → ["27","28","29","30"]; "27-33" expands to 27…33 (numeric ranges up to 200 codes). */
 export function parseBatchCodes(text: string): string[] {
   const out: string[] = [];
   for (const part of text.toUpperCase().split(/[\s,;]+/).filter(Boolean)) {
+    // Numeric range only (27-33); anything else with a dash is one batch number
     const range = /^(\d+)-(\d+)$/.exec(part);
     if (range) {
       const [from, to] = [Number(range[1]), Number(range[2])];

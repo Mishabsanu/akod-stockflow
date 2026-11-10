@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import { MR_PRIORITIES, MR_STATUSES, type MrPriority, type MrStatus } from "@/lib/materialRequestTypes";
 
 export interface MrItemDoc {
@@ -83,6 +84,9 @@ const MaterialRequestSchema = new Schema<MaterialRequestDoc>(
 
 MaterialRequestSchema.index({ createdAt: -1 });
 MaterialRequestSchema.index({ "items.product": 1 });
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+MaterialRequestSchema.plugin(softDeletePlugin, {});
 
 export const MaterialRequest: Model<MaterialRequestDoc> =
   (models.MaterialRequest as Model<MaterialRequestDoc>) || model<MaterialRequestDoc>("MaterialRequest", MaterialRequestSchema);

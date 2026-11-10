@@ -1,17 +1,32 @@
 "use client";
 
-import { Form, Formik } from "formik";
+import { Form, Formik, useField } from "formik";
 import { Tags } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { SelectField, STATUS_OPTIONS, TextAreaField, TextField } from "@/components/forms/FormikFields";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import type { Category } from "@/lib/commerceTypes";
+import { VariantImagePicker } from "@/components/products/ProductImages";
+import type { Category, ProductImage } from "@/lib/commerceTypes";
 import { categorySchema, emptyCategory, type CategoryInput } from "@/lib/validation/category.schema";
 import { ApiError, resourceApi } from "@/services/apiClient";
 
 const api = resourceApi<Category>("/api/categories");
+
+/** Optional category photo, uploaded to Cloudinary <CLOUDINARY_FOLDER>/categories. */
+function CategoryImageField() {
+  const [field, , helpers] = useField<ProductImage | null>("image");
+  return (
+    <div className="flex items-center gap-3">
+      <VariantImagePicker image={field.value} onChange={(next) => void helpers.setValue(next)} folder="categories" />
+      <div>
+        <p className="text-[12px] font-semibold text-slate-700">Category Image</p>
+        <p className="text-[11px] text-slate-500">Optional · PNG, JPG or WebP, max 10 MB · click the box to upload or replace</p>
+      </div>
+    </div>
+  );
+}
 
 /** Create / edit a category. `category` = null → closed; "new" → create. */
 export function CategoryFormModal({ category, onClose }: { category: Category | "new" | null; onClose: () => void }) {
@@ -19,7 +34,7 @@ export function CategoryFormModal({ category, onClose }: { category: Category | 
   if (!category) return null;
   const editing = category !== "new" ? category : null;
   const initial: CategoryInput = editing
-    ? { name: editing.name, description: editing.description ?? "", status: editing.status }
+    ? { name: editing.name, description: editing.description ?? "", status: editing.status, image: editing.image ?? null }
     : emptyCategory;
 
   return (
@@ -64,6 +79,7 @@ export function CategoryFormModal({ category, onClose }: { category: Category | 
           }
         >
           <Form noValidate className="grid grid-cols-1 gap-3">
+            <CategoryImageField />
             <TextField name="name" label="Category Name" required placeholder="e.g. Chips" autoFocus maxLength={80} />
             <TextAreaField name="description" label="Description" placeholder="Optional" maxLength={500} />
             <SelectField

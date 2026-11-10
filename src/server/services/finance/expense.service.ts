@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../../models/softDelete";
 import { isValidObjectId } from "mongoose";
 import { EXPENSE_CATEGORIES, type Expense, type ExpenseStatus, type Payment as PaymentRow, type PaymentMethod } from "@/lib/financeTypes";
 import { fromPaise, toPaise } from "@/lib/money";
@@ -167,14 +168,14 @@ export async function cancelExpense(id: string): Promise<Expense> {
   return getExpense(id);
 }
 
-export async function deleteExpense(id: string): Promise<void> {
+export async function deleteExpense(id: string, userId?: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Expense");
   const existing = await ExpenseModel.findById(id).select("_id").lean();
   if (!existing) throw notFound("Expense");
   if (await Payment.exists({ referenceType: "EXPENSE", referenceId: existing._id })) {
     throw new AppError("This expense has payments. Delete its payments first.", 409);
   }
-  await ExpenseModel.deleteOne({ _id: id });
+  await softDelete(ExpenseModel, { _id: id }, { batch: newDeleteBatch(), userId, primary: true });
 }
 
 /** Marketplaces for the expense form (marketplace fees). */

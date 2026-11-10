@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import type { RecordStatus } from "@/lib/types";
 
 export interface UserDoc {
@@ -31,5 +32,8 @@ const UserSchema = new Schema<UserDoc>(
 );
 
 UserSchema.index({ createdAt: -1 });
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+UserSchema.plugin(softDeletePlugin, { unique: ["email"] });
 
 export const User: Model<UserDoc> = (models.User as Model<UserDoc>) || model<UserDoc>("User", UserSchema);

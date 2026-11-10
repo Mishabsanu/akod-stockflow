@@ -1,6 +1,7 @@
 "use client";
 
-import { Edit2, Plus } from "lucide-react";
+import { Edit2, Eye, Plus } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { usePermission } from "@/components/providers/SessionProvider";
 import { DataTable } from "@/components/table/DataTable";
@@ -13,6 +14,7 @@ import { ManufacturerFormModal } from "./ManufacturerFormModal";
 
 const iconBtn = "p-1 rounded text-slate-400 hover:text-brand hover:bg-brand-light transition-colors";
 const SHOWN_CODES = 10;
+export const BASE = "/dashboard/production";
 
 export function NewManufacturerButton() {
   const [open, setOpen] = useState(false);
@@ -24,7 +26,7 @@ export function NewManufacturerButton() {
         className="inline-flex items-center gap-1.5 bg-brand hover:bg-brand-dark text-white rounded-lg px-3.5 py-2 font-bold text-xs shadow-xs transition"
       >
         <Plus className="w-4 h-4" />
-        New Manufacturer
+        New Batch Number
       </button>
       <ManufacturerFormModal manufacturer={open ? "new" : null} onClose={() => setOpen(false)} />
     </>
@@ -58,26 +60,29 @@ export function ManufacturerListView({ data }: { data: Paginated<Manufacturer> }
   const columns = useMemo<Column<Manufacturer>[]>(
     () => [
       {
-        key: "name",
-        label: "Manufacturer",
-        render: (m) => (
-          <span className="inline-flex flex-col max-w-xs">
-            <span className="font-semibold text-slate-900 whitespace-normal">{m.name}</span>
-            <span className="text-[11px] text-slate-500 whitespace-normal line-clamp-2">{m.address}</span>
-          </span>
-        ),
-      },
-      { key: "fssaiLicNo", label: "FSSAI Lic. No.", mono: true, render: (m) => m.fssaiLicNo },
-      {
         key: "batchCodes",
-        label: "Batch Codes",
+        label: "Batch Number",
         render: (m) => (
           <span className="whitespace-normal">
             <CodeChips codes={m.batchCodes} limit={SHOWN_CODES} />
           </span>
         ),
       },
-      { key: "phone", label: "Phone", hiddenByDefault: true, render: (m) => m.phone || "—" },
+      { key: "fssaiLicNo", label: "FSSAI Lic. No.", mono: true, render: (m) => m.fssaiLicNo },
+      {
+        key: "name",
+        label: "Company Name",
+        render: (m) => (
+          <Link href={`${BASE}/${m._id}`} className="font-semibold text-slate-900 hover:text-brand whitespace-normal">
+            {m.name}
+          </Link>
+        ),
+      },
+      {
+        key: "address",
+        label: "Address",
+        render: (m) => <span className="block max-w-xs text-slate-600 whitespace-normal line-clamp-2">{m.address}</span>,
+      },
       { key: "status", label: "Status", align: "center", render: (m) => <StatusBadge status={m.status} /> },
     ],
     []
@@ -88,17 +93,20 @@ export function ManufacturerListView({ data }: { data: Paginated<Manufacturer> }
       <DataTable
         data={data}
         columns={columns}
-        itemName="manufacturers"
-        searchPlaceholder="Search name, address, FSSAI no or an exact batch code..."
+        itemName="batch numbers"
+        searchPlaceholder="Search batch number, FSSAI no, company name, address..."
         filters={[STATUS_FILTER]}
         rowActions={(m) => (
           <div className="flex items-center justify-center gap-1.5">
+            <Link href={`${BASE}/${m._id}`} title="View" className={iconBtn}>
+              <Eye className="w-3.5 h-3.5" />
+            </Link>
             {canEdit && (
               <button type="button" title="Edit" className={iconBtn} onClick={() => setEditing(m)}>
                 <Edit2 className="w-3.5 h-3.5" />
               </button>
             )}
-            {canDelete && <RowActions entityLabel="Manufacturer" itemName={m.name} deleteUrl={`/api/manufacturers/${m._id}`} />}
+            {canDelete && <RowActions entityLabel="Batch Number" itemName={`${m.batchCodes.join(", ")} — ${m.name}`} deleteUrl={`/api/manufacturers/${m._id}`} />}
           </div>
         )}
       />

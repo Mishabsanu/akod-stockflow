@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../models/softDelete";
 import { invalidateSessionCache } from "../auth/session";
 import { isValidObjectId, Types } from "mongoose";
 import type { Option, Paginated, SessionUser, User } from "@/lib/types";
@@ -152,7 +153,7 @@ export async function deleteUser(id: string, actor: SessionUser): Promise<void> 
   if (await connection.collection("orders").findOne({ createdBy: existing._id }, { projection: { _id: 1 } })) {
     throw new AppError("This user has created orders. Set the account to inactive instead.", 409);
   }
-  await UserModel.findByIdAndDelete(id);
+  await softDelete(UserModel, { _id: id }, { batch: newDeleteBatch(), userId: actor._id, primary: true });
 }
 
 /** Active users for dropdowns. */

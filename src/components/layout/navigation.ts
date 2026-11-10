@@ -51,11 +51,11 @@ export const NAV_MODULES: NavModule[] = [
   },
   {
     id: "production",
-    label: "Batch Codes",
+    label: "Batch Numbers",
     icon: Factory,
     basePath: "/dashboard/production",
     items: [
-      { label: "Manufacturers", href: "/dashboard/production", permission: "production" },
+      { label: "Batch Numbers", href: "/dashboard/production", permission: "production" },
       { label: "Batch Lookup", href: "/dashboard/production/lookup", permission: "production" },
     ],
   },
@@ -111,6 +111,7 @@ export const NAV_MODULES: NavModule[] = [
       { label: "Users", href: "/dashboard/settings/users", permission: "user" },
       { label: "Roles & Permissions", href: "/dashboard/settings/roles", permission: "role" },
       { label: "Company", href: "/dashboard/settings/company", permission: "setting" },
+      { label: "Recycle Bin", href: "/dashboard/settings/recycle-bin" },
     ],
   },
 ];

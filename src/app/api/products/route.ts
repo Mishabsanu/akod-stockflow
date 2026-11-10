@@ -18,7 +18,7 @@ export const GET = apiHandler("authenticated", async ({ req, user }) => {
   if (forPicker) {
     return { items: await listSellableProducts({ inStock: params.get("inStock") === "1", search: params.get("search") ?? "" }) };
   }
-  return listProducts(parseListQuery(params, ["category"]));
+  return listProducts(parseListQuery(params, ["category", "freeDelivery"]));
 });
 
 export const POST = apiHandler({ module: "product", action: "create" }, async ({ req, user }) => {

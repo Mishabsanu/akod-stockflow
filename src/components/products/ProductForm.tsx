@@ -23,6 +23,25 @@ interface ProductFormProps {
   defaultReorderLevel?: number;
 }
 
+/** Free delivery toggle (variants follow the product). */
+function FreeDeliveryField() {
+  const [field, , helpers] = useField<boolean>("freeDelivery");
+  return (
+    <label className="flex items-start gap-2.5 p-2.5 rounded-lg border border-line bg-slate-50/60 cursor-pointer self-end">
+      <input
+        type="checkbox"
+        checked={Boolean(field.value)}
+        onChange={(e) => void helpers.setValue(e.target.checked)}
+        className="mt-0.5 w-4 h-4 accent-brand"
+      />
+      <span>
+        <span className="block text-[12px] font-semibold text-slate-700">Free Delivery</span>
+        <span className="block text-[11px] text-slate-500">Shown on the product list; applies to all its variants</span>
+      </span>
+    </label>
+  );
+}
+
 function ImagesField() {
   const [field, , helpers] = useField<ProductImage[]>("images");
   return <ProductImageGallery images={field.value ?? []} onChange={(next) => void helpers.setValue(next)} max={MAX_PRODUCT_IMAGES} />;
@@ -40,6 +59,7 @@ function toInitialValues(initial: Product): ProductInput {
     costPrice: initial.costPrice,
     reorderLevel: initial.reorderLevel,
     status: initial.status,
+    freeDelivery: Boolean(initial.freeDelivery),
     images: initial.images ?? [],
     variants: (initial.variants ?? []).map((v) => ({
       _id: v._id,
@@ -112,6 +132,7 @@ export function ProductForm({ initial, categories, defaultReorderLevel }: Produc
                 />
                 {!hasVariants && <TextField name="barcode" label="Barcode" placeholder="Optional (EAN / UPC)" inputMode="numeric" />}
                 <SelectField name="status" label="Status" required options={STATUS_OPTIONS} />
+                <FreeDeliveryField />
                 <TextAreaField
                   name="description"
                   label="Description"

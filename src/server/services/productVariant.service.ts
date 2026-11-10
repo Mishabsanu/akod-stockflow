@@ -10,10 +10,12 @@ import { Product as ProductModel, type ProductImageDoc } from "../models/Product
 import { StockTransaction } from "../models/StockTransaction";
 import { stockFor } from "./stock.service";
 import { destroyRemoved } from "./upload.service";
+import { newDeleteBatch, softDelete } from "../models/softDelete";
 
 interface ParentInfo {
   _id: Types.ObjectId | string;
   name: string;
+  freeDelivery?: boolean;
   category?: string;
   description?: string;
 }
@@ -84,14 +86,11 @@ export async function applyVariantSync(
   plan: { removeIds: string[]; removedImages: ProductImageDoc[] },
   userId?: string
 ) {
-  if (plan.removeIds.length) {
-    await Promise.all([
-      ProductModel.deleteMany({ _id: { $in: plan.removeIds } }),
-      Inventory.deleteMany({ product: { $in: plan.removeIds } }),
-      ChannelProduct.deleteMany({ product: { $in: plan.removeIds } }),
-    ]);
-    await destroyRemoved(plan.removedImages, []);
+  // Variants removed on the form go to the Recycle Bin one by one (photo and stock row kept for restore)
+  for (const removeId of plan.removeIds) {
+    await softDelete(ProductModel, { _id: removeId }, { batch: newDeleteBatch(), userId, primary: true });
   }
+  if (plan.removeIds.length) await ChannelProduct.deleteMany({ product: { $in: plan.removeIds } });
 
   const before = new Map(
     (await ProductModel.find({ parent: parent._id }).select("_id images").lean()).map((v) => [String(v._id), v.images ?? []])
@@ -113,6 +112,7 @@ export async function applyVariantSync(
       images: v.image ? [v.image] : [],
       parent: parent._id,
       hasVariants: false,
+      freeDelivery: Boolean(parent.freeDelivery),
     };
     if (v._id) {
       await ProductModel.updateOne({ _id: v._id }, doc, { runValidators: true });
@@ -133,6 +133,7 @@ export async function refreshVariants(parent: ParentInfo) {
         name: { $concat: [parent.name, " - ", "$variantName"] },
         category: parent.category ?? "",
         description: parent.description ?? "",
+        freeDelivery: Boolean(parent.freeDelivery),
       },
     },
   ]);

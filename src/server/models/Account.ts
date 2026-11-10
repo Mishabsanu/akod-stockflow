@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import type { AccountType } from "@/lib/financeTypes";
 import type { RecordStatus } from "@/lib/types";
 
@@ -29,5 +30,8 @@ const AccountSchema = new Schema<AccountDoc>(
   },
   { timestamps: true }
 );
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+AccountSchema.plugin(softDeletePlugin, { unique: ["code"] });
 
 export const Account: Model<AccountDoc> = (models.Account as Model<AccountDoc>) || model<AccountDoc>("Account", AccountSchema);

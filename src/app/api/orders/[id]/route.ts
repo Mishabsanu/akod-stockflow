@@ -10,7 +10,7 @@ export const PUT = apiHandler<{ id: string }>({ module: "order", action: "update
 );
 
 /** Pending orders only — confirmed orders are cancelled instead. */
-export const DELETE = apiHandler<{ id: string }>({ module: "order", action: "delete" }, async ({ params }) => {
-  await deleteOrder(params.id);
+export const DELETE = apiHandler<{ id: string }>({ module: "order", action: "delete" }, async ({ params, user }) => {
+  await deleteOrder(params.id, user._id);
   return { success: true };
 });

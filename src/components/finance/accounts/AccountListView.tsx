@@ -14,7 +14,6 @@ import { formatCurrency } from "@/lib/format";
 import { apiRequest, ApiError } from "@/services/apiClient";
 import { FINANCE_PATHS } from "../shared/financeUi";
 import { StaticTable } from "../shared/FinanceWidgets";
-import { AccountFormModal } from "./AccountFormModal";
 
 const iconBtn = "p-1 rounded text-slate-400 transition-colors";
 
@@ -22,7 +21,6 @@ export function AccountListView({ accounts }: { accounts: FinanceAccount[] }) {
   const router = useRouter();
   const canEdit = usePermission("account", "update");
   const canDelete = usePermission("account", "delete");
-  const [editing, setEditing] = useState<FinanceAccount | null>(null);
   const [deleting, setDeleting] = useState<FinanceAccount | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -31,7 +29,7 @@ export function AccountListView({ accounts }: { accounts: FinanceAccount[] }) {
     setBusy(true);
     try {
       await apiRequest(`/api/finance/accounts/${deleting._id}`, "DELETE");
-      toast.success("Account deleted");
+      toast.success("Account moved to the Recycle Bin");
       setDeleting(null);
       router.refresh();
     } catch (error) {
@@ -74,9 +72,9 @@ export function AccountListView({ accounts }: { accounts: FinanceAccount[] }) {
               <BookOpen className="w-3.5 h-3.5" />
             </Link>
             {canEdit && (
-              <button type="button" onClick={() => setEditing(r)} title="Edit account" className={`${iconBtn} hover:text-brand hover:bg-brand-light`}>
+              <Link href={`${FINANCE_PATHS.accounts}/${r._id}/edit`} title="Edit account" className={`${iconBtn} hover:text-brand hover:bg-brand-light`}>
                 <Edit2 className="w-3.5 h-3.5" />
-              </button>
+              </Link>
             )}
             {canDelete && (
               <button type="button" onClick={() => setDeleting(r)} title="Delete account" className={`${iconBtn} hover:text-red-600 hover:bg-red-50`}>
@@ -95,7 +93,6 @@ export function AccountListView({ accounts }: { accounts: FinanceAccount[] }) {
   return (
     <>
       <StaticTable rows={accounts} columns={columns} itemName="accounts" footer={["Total (active)", "", "", formatCurrency(total), "", ""]} />
-      <AccountFormModal account={editing ?? undefined} open={Boolean(editing)} onClose={() => setEditing(null)} />
       <ConfirmDeleteModal
         open={Boolean(deleting)}
         entityLabel="Account"

@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import type { RecordStatus } from "@/lib/types";
 
 /** A marketplace the business sells on (Amazon, Flipkart, Blinkit …), created by the user. */
@@ -23,5 +24,8 @@ const ChannelSchema = new Schema<ChannelDoc>(
   },
   { timestamps: true }
 );
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+ChannelSchema.plugin(softDeletePlugin, { unique: ["code"] });
 
 export const Channel: Model<ChannelDoc> = (models.Channel as Model<ChannelDoc>) || model<ChannelDoc>("Channel", ChannelSchema);

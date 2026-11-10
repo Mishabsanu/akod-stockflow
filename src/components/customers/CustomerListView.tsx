@@ -38,7 +38,7 @@ export function CustomerListView({ data }: { data: Paginated<Customer> }) {
     setBusy(true);
     try {
       await apiRequest(`${CUSTOMER_UI.apiBase}/${deleting._id}`, "DELETE");
-      toast.success("Contact deleted");
+      toast.success("Contact moved to the Recycle Bin");
       setDeleting(null);
       router.refresh();
     } catch (error) {

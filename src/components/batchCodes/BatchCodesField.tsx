@@ -19,7 +19,7 @@ export function BatchCodesField({ name = "batchCodes" }: { name?: string }) {
     if (parsed.length === 0) return;
     const bad = parsed.find((c) => !BATCH_CODE_PATTERN.test(c));
     if (bad) {
-      setLocalError(`"${bad}" is not valid — letters and numbers only, up to 10`);
+      setLocalError(`"${bad}" is not valid — letters, numbers and - / . only, up to 30`);
       return;
     }
     setLocalError("");
@@ -30,11 +30,11 @@ export function BatchCodesField({ name = "batchCodes" }: { name?: string }) {
 
   return (
     <FormField
-      label="Batch Codes"
+      label="Batch Number"
       htmlFor={`${name}-input`}
       required
       error={error}
-      hint={codes.length ? `${codes.length} code(s)` : "Enter adds · 27, 28 or 27-33"}
+      hint={codes.length ? `${codes.length} batch number(s)` : "Press Enter to add · several: 27, 28 · range: 27-33"}
       className="sm:col-span-2"
     >
       <div className="flex gap-2">
@@ -49,7 +49,7 @@ export function BatchCodesField({ name = "batchCodes" }: { name?: string }) {
             }
           }}
           onBlur={add}
-          placeholder="e.g. 27 or 27-33"
+          placeholder="e.g. 27 or AK-2611-B01"
           autoComplete="off"
           className={`${inputClass(Boolean(error))} uppercase font-mono`}
         />

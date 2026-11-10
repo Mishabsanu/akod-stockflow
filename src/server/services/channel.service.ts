@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../models/softDelete";
 import { assertAllocatable, channelSold, remainingOf, sellableOnChannel } from "./channelAllocation";
 import { isValidObjectId, Types } from "mongoose";
 import type { Channel, ChannelProduct } from "@/lib/commerceTypes";
@@ -79,13 +80,12 @@ export async function setChannelStatus(id: string, status: RecordStatus): Promis
   return getChannel(id);
 }
 
-export async function deleteChannel(id: string): Promise<void> {
+export async function deleteChannel(id: string, userId?: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Channel");
   if (await Order.exists({ channel: id })) {
     throw new AppError("This marketplace has orders. Deactivate it instead.", 409);
   }
-  const deleted = await ChannelModel.findByIdAndDelete(id);
-  if (!deleted) throw notFound("Channel");
+  if (!(await softDelete(ChannelModel, { _id: id }, { batch: newDeleteBatch(), userId, primary: true }))) throw notFound("Channel");
   await ChannelProductModel.deleteMany({ channel: id });
 }
 

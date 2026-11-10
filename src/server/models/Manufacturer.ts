@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import type { RecordStatus } from "@/lib/types";
 
 /** Manufacturing unit and its batch-code prefixes (see lib/batchCodeTypes). */
@@ -33,6 +34,9 @@ const ManufacturerSchema = new Schema<ManufacturerDoc>(
 // A batch code belongs to exactly one manufacturer (unique across all documents)
 ManufacturerSchema.index({ batchCodes: 1 }, { unique: true });
 ManufacturerSchema.index({ name: 1 });
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+ManufacturerSchema.plugin(softDeletePlugin, { unique: ["batchCodes"] });
 
 export const Manufacturer: Model<ManufacturerDoc> =
   (models.Manufacturer as Model<ManufacturerDoc>) || model<ManufacturerDoc>("Manufacturer", ManufacturerSchema);

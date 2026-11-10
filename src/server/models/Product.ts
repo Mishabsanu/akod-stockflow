@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import type { RecordStatus } from "@/lib/types";
 
 export interface ProductImageDoc {
@@ -33,6 +34,8 @@ export interface ProductDoc {
   parent?: Types.ObjectId | null;
   variantName?: string;
   hasVariants?: boolean;
+  /** Delivered free of charge (variants copy their product) */
+  freeDelivery?: boolean;
   createdBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -65,6 +68,7 @@ const ProductSchema = new Schema<ProductDoc>(
     parent: { type: Schema.Types.ObjectId, ref: "Product", default: null, index: true },
     variantName: { type: String, trim: true, default: "" },
     hasVariants: { type: Boolean, default: false },
+    freeDelivery: { type: Boolean, default: false, index: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
@@ -73,5 +77,8 @@ const ProductSchema = new Schema<ProductDoc>(
 // Barcode is optional but must be unique when given
 ProductSchema.index({ barcode: 1 }, { unique: true, partialFilterExpression: { barcode: { $gt: "" } } });
 ProductSchema.index({ name: 1 });
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+ProductSchema.plugin(softDeletePlugin, { unique: ["sku", "barcode"] });
 
 export const Product: Model<ProductDoc> = (models.Product as Model<ProductDoc>) || model<ProductDoc>("Product", ProductSchema);

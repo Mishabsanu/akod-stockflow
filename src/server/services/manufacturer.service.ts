@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../models/softDelete";
 import { isValidObjectId } from "mongoose";
 import { sortBatchCodes, type BatchLookupResult, type Manufacturer } from "@/lib/batchCodeTypes";
 import type { Paginated } from "@/lib/types";
@@ -24,7 +25,8 @@ export async function listManufacturers(query: ListQuery): Promise<Paginated<Man
   const filter: Filter = { ...statusFilter(query.status) };
   if (query.search) {
     const base = searchFilter(query.search, ["name", "address", "fssaiLicNo"]).$or as Filter[];
-    filter.$or = [...base, { batchCodes: new RegExp(`^${escapeRegex(query.search.toUpperCase())}$`) }];
+    // Batch numbers match from the start: "27" finds 27, 270 …
+    filter.$or = [...base, { batchCodes: new RegExp(`^${escapeRegex(query.search.toUpperCase())}`) }];
   }
   const [items, total] = await Promise.all([
     ManufacturerModel.find(filter)
@@ -52,7 +54,7 @@ async function assertCodesFree(codes: string[], exceptId?: string) {
     .lean();
   if (!clash) return;
   const taken = sortBatchCodes(codes.filter((c) => clash.batchCodes.includes(c)));
-  const message = `Batch code${taken.length > 1 ? "s" : ""} ${taken.join(", ")} already belong${taken.length > 1 ? "" : "s"} to ${clash.name}`;
+  const message = `Batch number${taken.length > 1 ? "s" : ""} ${taken.join(", ")} already belong${taken.length > 1 ? "" : "s"} to ${clash.name}`;
   throw new AppError(message, 409, { batchCodes: message });
 }
 
@@ -72,10 +74,9 @@ export async function updateManufacturer(id: string, input: ManufacturerInput): 
   return getManufacturer(id);
 }
 
-export async function deleteManufacturer(id: string): Promise<void> {
+export async function deleteManufacturer(id: string, userId?: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Manufacturer");
-  const deleted = await ManufacturerModel.findByIdAndDelete(id);
-  if (!deleted) throw notFound("Manufacturer");
+  if (!(await softDelete(ManufacturerModel, { _id: id }, { batch: newDeleteBatch(), userId, primary: true }))) throw notFound("Manufacturer");
 }
 
 /**
@@ -83,9 +84,9 @@ export async function deleteManufacturer(id: string): Promise<void> {
  * the longest saved code that the typed text starts with wins. Inactive manufacturers are not found.
  */
 export async function lookupBatchCode(raw: string): Promise<BatchLookupResult | null> {
-  const code = raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 40);
+  const code = raw.toUpperCase().replace(/[^A-Z0-9\-/.]/g, "").slice(0, 40);
   if (!code) return null;
-  const prefixes = Array.from({ length: Math.min(code.length, 10) }, (_, i) => code.slice(0, i + 1));
+  const prefixes = Array.from({ length: Math.min(code.length, 30) }, (_, i) => code.slice(0, i + 1));
   const docs = await ManufacturerModel.find({ status: "active", batchCodes: { $in: prefixes } }).select(PUBLIC_FIELDS).lean<ManufacturerDoc[]>();
   let best: BatchLookupResult | null = null;
   for (const doc of docs) {

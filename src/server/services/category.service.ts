@@ -1,4 +1,5 @@
 import "server-only";
+import { newDeleteBatch, softDelete } from "../models/softDelete";
 import { isValidObjectId } from "mongoose";
 import type { Category } from "@/lib/commerceTypes";
 import type { Paginated } from "@/lib/types";
@@ -8,6 +9,7 @@ import { paginate, searchFilter, statusFilter, type ListQuery } from "../http/qu
 import { Category as CategoryModel, type CategoryDoc } from "../models/Category";
 import { Product } from "../models/Product";
 import { toPlain } from "../utils/serialize";
+import { destroyRemoved } from "./upload.service";
 
 const PUBLIC_FIELDS = "-createdBy -__v -nameKey";
 const keyOf = (name: string) => name.trim().toLowerCase();
@@ -104,16 +106,17 @@ export async function createCategory(input: CategoryInput, userId: string): Prom
 /** Renaming a category renames it on every product and variant that uses it. */
 export async function updateCategory(id: string, input: CategoryInput): Promise<Category> {
   if (!isValidObjectId(id)) throw notFound("Category");
-  const current = await CategoryModel.findById(id).select("name").lean();
+  const current = await CategoryModel.findById(id).select("name image").lean();
   if (!current) throw notFound("Category");
   await assertNameFree(input.name, id);
   const name = input.name.trim();
   await CategoryModel.updateOne({ _id: id }, { ...input, name, nameKey: keyOf(name) }, { runValidators: true });
   if (current.name !== name) await Product.updateMany({ category: current.name }, { category: name });
+  if (current.image) await destroyRemoved([current.image], input.image ? [input.image] : []);
   return getCategory(id);
 }
 
-export async function deleteCategory(id: string): Promise<void> {
+export async function deleteCategory(id: string, userId?: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Category");
   const doc = await CategoryModel.findById(id).select("name").lean();
   if (!doc) throw notFound("Category");
@@ -121,7 +124,7 @@ export async function deleteCategory(id: string): Promise<void> {
   if (used > 0) {
     throw new AppError(`${used} product(s) use "${doc.name}". Move them to another category or set this one to inactive.`, 409);
   }
-  await CategoryModel.deleteOne({ _id: id });
+  await softDelete(CategoryModel, { _id: id }, { batch: newDeleteBatch(), userId, primary: true });
 }
 
 /** All category names (list filters), active ones first in the form via `activeOnly`. */

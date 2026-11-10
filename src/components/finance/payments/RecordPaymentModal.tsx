@@ -1,18 +1,20 @@
 "use client";
 
 import { Form, Formik } from "formik";
-import { Wallet } from "lucide-react";
+import { Plus, Wallet } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { FormSurface } from "@/components/forms/FormSurface";
 import { SelectField, TextAreaField, TextField } from "@/components/forms/FormikFields";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import { useApiSubmit } from "@/hooks/useApiSubmit";
 import type { PaymentDirection } from "@/lib/financeTypes";
 import { formatCurrency } from "@/lib/format";
 import { todayIST } from "@/lib/indiaDate";
 import { paymentSchema, type PaymentInput } from "@/lib/validation/finance.schema";
 import { apiRequest } from "@/services/apiClient";
-import type { AccountOption } from "../shared/financeUi";
+import { FINANCE_PATHS, type AccountOption } from "../shared/financeUi";
 import { PaymentModeFields } from "../shared/PaymentModeFields";
 import { maxHint, ReferencePicker } from "./ReferencePicker";
 
@@ -35,6 +37,8 @@ interface Props {
   /** Open as soon as it mounts (Payables links with ?pay=1) */
   initialOpen?: boolean;
   buttonLabel?: string;
+  /** Full page (Record Payment screen) instead of a trigger + modal */
+  page?: { backHref: string };
 }
 
 const FORM_ID = "payment-form";
@@ -49,8 +53,10 @@ const FOR_OPTIONS = [
  * Proserve "quick pay": records a payment received / made. Linked payments re-calculate the
  * order's or expense's paid / balance on the server; every payment lands in a Cash / Bank account.
  */
-export function RecordPaymentModal({ accounts, preset, trigger, buttonLabel = "Record Payment", initialOpen = false }: Props) {
-  const [open, setOpen] = useState(initialOpen);
+export function RecordPaymentModal({ accounts, preset, trigger, buttonLabel = "Record Payment", initialOpen = false, page }: Props) {
+  const router = useRouter();
+  const [open, setOpen] = useState(initialOpen || Boolean(page));
+  const close = page ? () => router.push(page.backHref) : () => setOpen(false);
   const [max, setMax] = useState<number | null>(preset?.max ?? null);
 
   const initialValues: PaymentInput = {
@@ -69,7 +75,8 @@ export function RecordPaymentModal({ accounts, preset, trigger, buttonLabel = "R
   const onSubmit = useApiSubmit<PaymentInput>({
     request: (values) => apiRequest("/api/payments", "POST", values),
     successMessage: "Payment recorded",
-    onSuccess: () => setOpen(false),
+    onSuccess: page ? undefined : () => setOpen(false),
+    redirectTo: page?.backHref,
   });
 
   const show = () => {
@@ -79,7 +86,7 @@ export function RecordPaymentModal({ accounts, preset, trigger, buttonLabel = "R
 
   return (
     <>
-      {trigger ? (
+      {page ? null : trigger ? (
         trigger(show)
       ) : (
         <Button icon={<Wallet className="w-4 h-4" />} onClick={show}>
@@ -89,15 +96,15 @@ export function RecordPaymentModal({ accounts, preset, trigger, buttonLabel = "R
       {open && (
         <Formik initialValues={initialValues} validationSchema={paymentSchema} onSubmit={onSubmit}>
           {({ isSubmitting, values, setFieldValue }) => (
-            <Modal
-              open
-              onClose={() => setOpen(false)}
+            <FormSurface
+              page={page}
+              onClose={close}
               title={preset ? (preset.direction === "RECEIVED" ? "Receive Payment" : "Make Payment") : "Record Payment"}
               subtitle={preset ? `${preset.label} · due ${formatCurrency(preset.max)}` : "Money received or paid — partial payments are fine"}
               icon={<Wallet className="w-4 h-4" />}
               footer={
                 <>
-                  <Button variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
+                  <Button variant="outline" onClick={close} disabled={isSubmitting}>
                     Cancel
                   </Button>
                   <Button type="submit" form={FORM_ID} loading={isSubmitting}>
@@ -154,10 +161,23 @@ export function RecordPaymentModal({ accounts, preset, trigger, buttonLabel = "R
                 <PaymentModeFields accounts={accounts} />
                 <TextAreaField name="notes" label="Notes" rows={2} className="sm:col-span-2" maxLength={300} />
               </Form>
-            </Modal>
+            </FormSurface>
           )}
         </Formik>
       )}
     </>
+  );
+}
+
+/** Header button: opens the Record Payment page. */
+export function RecordPaymentLink() {
+  return (
+    <Link
+      href={`${FINANCE_PATHS.payments}/new`}
+      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-brand hover:bg-brand-dark text-white text-xs font-bold transition"
+    >
+      <Plus className="w-4 h-4" />
+      Record Payment
+    </Link>
   );
 }

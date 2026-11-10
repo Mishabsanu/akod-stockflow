@@ -9,7 +9,8 @@ import { listPayments, PAYMENT_FILTERS } from "@/server/services/finance/payment
 import { DateRangeFilter } from "../shared/DateRangeFilter";
 import { MoneyTile } from "../shared/FinanceWidgets";
 import { PaymentListView } from "./PaymentListView";
-import { RecordPaymentModal } from "./RecordPaymentModal";
+import { FINANCE_PATHS } from "../shared/financeUi";
+import { RecordPaymentLink, RecordPaymentModal } from "./RecordPaymentModal";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -27,7 +28,7 @@ export async function PaymentListPage({ searchParams }: { searchParams: SearchPa
         actions={
           <>
             <ImportExport entity="payments" title="Payments" />
-            {can(user, "payment", "create") && <RecordPaymentModal accounts={accounts} />}
+            {can(user, "payment", "create") && <RecordPaymentLink />}
           </>
         }
       />
@@ -40,4 +41,12 @@ export async function PaymentListPage({ searchParams }: { searchParams: SearchPa
       <PaymentListView data={data} accounts={accounts.map(({ value, label }) => ({ value, label }))} />
     </>
   );
+}
+
+/** Record Payment — full page. */
+export async function PaymentCreatePage() {
+  const { allowed } = await getPageAccess("payment", "create");
+  if (!allowed) return <AccessDenied />;
+  const accounts = await listAccountOptions();
+  return <RecordPaymentModal accounts={accounts} page={{ backHref: FINANCE_PATHS.payments }} />;
 }

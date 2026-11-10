@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import { PAYMENT_METHODS, type PaymentDirection, type PaymentMethod, type PaymentRefType } from "@/lib/financeTypes";
 
 /**
@@ -45,5 +46,8 @@ const PaymentSchema = new Schema<PaymentDoc>(
 );
 
 PaymentSchema.index({ referenceType: 1, referenceId: 1 });
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+PaymentSchema.plugin(softDeletePlugin, {});
 
 export const Payment: Model<PaymentDoc> = (models.Payment as Model<PaymentDoc>) || model<PaymentDoc>("Payment", PaymentSchema);

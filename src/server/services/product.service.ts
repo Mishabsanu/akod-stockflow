@@ -13,6 +13,7 @@ import { canonicalCategory, listCategoryNames } from "./category.service";
 import { applyVariantSync, hasHistory, planVariantSync, refreshVariants } from "./productVariant.service";
 import { stockFor } from "./stock.service";
 import { destroyRemoved } from "./upload.service";
+import { newDeleteBatch, softDelete } from "../models/softDelete";
 
 const SEARCH_FIELDS = ["sku", "name", "barcode", "category", "variantName"];
 const PUBLIC_FIELDS = "-createdBy -__v";
@@ -67,6 +68,8 @@ export function toProductDoc(input: ProductInput) {
 export async function productListFilter(query: ListQuery): Promise<Filter> {
   const filter: Filter = { parent: null, ...statusFilter(query.status) };
   if (query.filters.category) filter.category = query.filters.category;
+  if (query.filters.freeDelivery === "yes") filter.freeDelivery = true;
+  if (query.filters.freeDelivery === "no") filter.freeDelivery = { $ne: true };
   const search = searchFilter(query.search, SEARCH_FIELDS);
   if (search.$or) {
     const viaVariant = await ProductModel.find({ parent: { $ne: null }, ...search }).distinct("parent");
@@ -176,7 +179,8 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Pr
 }
 
 /** Deletes a product with its variants, or one variant; anything with orders or stock history is kept. */
-export async function deleteProduct(id: string): Promise<void> {
+/** Moves a product (with its variants) to the Recycle Bin; anything with orders or stock history is kept live. */
+export async function deleteProduct(id: string, userId?: string): Promise<void> {
   if (!isValidObjectId(id)) throw notFound("Product");
   const doc = await ProductModel.findById(id).select("parent images").lean();
   if (!doc) throw notFound("Product");
@@ -193,15 +197,15 @@ export async function deleteProduct(id: string): Promise<void> {
     }
   }
   const ids = all.map((p) => p._id);
-  await Promise.all([
-    ProductModel.deleteMany({ _id: { $in: ids } }),
-    ChannelProduct.deleteMany({ product: { $in: ids } }),
-    Inventory.deleteMany({ product: { $in: ids } }),
-  ]);
+  // One batch: restoring the product restores its variants. Photos and the (empty) stock row are kept for restore;
+  // marketplace listings are removed and must be assigned again after a restore.
+  const batch = newDeleteBatch();
+  await softDelete(ProductModel, { parent: id }, { batch, userId });
+  await softDelete(ProductModel, { _id: id }, { batch, userId, primary: true });
+  await ChannelProduct.deleteMany({ product: { $in: ids } });
   if (doc.parent && !(await ProductModel.exists({ parent: doc.parent }))) {
     await ProductModel.updateOne({ _id: doc.parent }, { hasVariants: false });
   }
-  await destroyRemoved(all.flatMap((p) => p.images ?? []), []);
 }
 
 /**

@@ -46,7 +46,7 @@ function pickable(list: FileList | null, room: number): File[] {
 }
 
 /** Cloudinary folder: <CLOUDINARY_FOLDER>/products or <CLOUDINARY_FOLDER>/product_variants */
-function useImageUpload(folder: "products" | "product_variants") {
+function useImageUpload(folder: "products" | "product_variants" | "categories") {
   const [uploading, setUploading] = useState(false);
   const upload = async (files: File[]): Promise<ProductImage[]> => {
     if (files.length === 0) return [];
@@ -185,9 +185,17 @@ export function ProductImageGallery({
 }
 
 /** One photo for a variant row: click to add / replace, × to remove. */
-export function VariantImagePicker({ image, onChange }: { image?: ProductImage | null; onChange: (next: ProductImage | null) => void }) {
+export function VariantImagePicker({
+  image,
+  onChange,
+  folder = "product_variants",
+}: {
+  image?: ProductImage | null;
+  onChange: (next: ProductImage | null) => void;
+  folder?: "product_variants" | "categories";
+}) {
   const input = useRef<HTMLInputElement>(null);
-  const { uploading, upload } = useImageUpload("product_variants");
+  const { uploading, upload } = useImageUpload(folder);
 
   const pick = async (list: FileList | null) => {
     const files = pickable(list, 1);

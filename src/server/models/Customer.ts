@@ -1,4 +1,5 @@
 import { model, models, Schema, type Model, type Types } from "mongoose";
+import { softDeletePlugin } from "./softDelete";
 import type { CustomerKind } from "@/lib/commerceTypes";
 import type { RecordStatus } from "@/lib/types";
 
@@ -39,6 +40,9 @@ const CustomerSchema = new Schema<CustomerDoc>(
 );
 
 CustomerSchema.index({ name: 1 });
+
+// Deleting moves the record to the Recycle Bin (see softDelete.ts)
+CustomerSchema.plugin(softDeletePlugin, {});
 
 export const Customer: Model<CustomerDoc> =
   (models.Customer as Model<CustomerDoc>) || model<CustomerDoc>("Customer", CustomerSchema);

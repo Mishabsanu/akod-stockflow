@@ -5,22 +5,12 @@ import { apiHandler } from "@/server/http/handler";
 import { uploadDocument } from "@/server/services/upload.service";
 
 const FOLDER_MODULE: Record<DocumentFolder, PermissionModule> = {
-  running_orders: "running_order",
-  delivery_notes: "delivery_note",
-  return_notes: "return_note",
-  workers: "worker",
-  cheques: "cheque",
-  leads: "lead",
-  quotes: "quote",
   expenses: "expense",
   payments: "payment",
-  leaves: "leave",
-  productions: "production",
   stock: "stock",
   products: "product",
   product_variants: "product",
-  checkups: "mechanical_checkup",
-  audits: "facility_audit",
+  categories: "category",
 };
 
 /** multipart `files` (max 10 per request) + `?folder=` → uploaded documents, not yet linked to a record. */

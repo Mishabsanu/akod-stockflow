@@ -9,7 +9,7 @@ export const PUT = apiHandler<{ id: string }>({ module: "product", action: "upda
   return updateProduct(params.id, input);
 });
 
-export const DELETE = apiHandler<{ id: string }>({ module: "product", action: "delete" }, async ({ params }) => {
-  await deleteProduct(params.id);
+export const DELETE = apiHandler<{ id: string }>({ module: "product", action: "delete" }, async ({ params, user }) => {
+  await deleteProduct(params.id, user._id);
   return { success: true };
 });
