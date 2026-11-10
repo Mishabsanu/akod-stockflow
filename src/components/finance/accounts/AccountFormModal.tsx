@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik, useFormikContext } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { Landmark, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -82,6 +83,7 @@ export function AccountFormModal({
           }
         >
           <Form id={FORM_ID} noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormErrorNotice />
             <TextField name="name" label="Account Name" required placeholder="e.g. HDFC Current A/c" maxLength={80} />
             <TextField name="code" label="Code" required placeholder="e.g. HDFC" maxLength={20} />
             <SelectField

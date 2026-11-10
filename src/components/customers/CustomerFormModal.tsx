@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik, type FormikHelpers } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -71,6 +72,7 @@ export function CustomerFormModal({ open, onClose, initial, defaultKind = "distr
       <Formik initialValues={initialValues} validationSchema={customerSchema} onSubmit={submit} enableReinitialize>
         {({ isSubmitting, values }) => (
           <Form noValidate className="space-y-5">
+            <FormErrorNotice />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SelectField name="kind" label="Type" required options={CUSTOMER_KIND_OPTIONS} disabled={lockKind} />
               <TextField name="name" label={values.kind === "distributor" ? "Distributor / Firm Name" : "Customer Name"} required maxLength={150} />

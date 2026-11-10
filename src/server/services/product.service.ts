@@ -10,12 +10,12 @@ import { AppError, notFound } from "../http/errors";
 import { paginate, searchFilter, statusFilter, type Filter, type ListQuery } from "../http/query";
 import { toPlain } from "../utils/serialize";
 import { canonicalCategory, listCategoryNames } from "./category.service";
-import { applyVariantSync, hasHistory, planVariantSync, refreshVariants } from "./productVariant.service";
+import { applyVariantSync, hasHistory, normalizeVariants, planVariantSync, refreshVariants, syncVariantStock } from "./productVariant.service";
 import { stockFor } from "./stock.service";
 import { destroyRemoved } from "./upload.service";
 import { newDeleteBatch, softDelete } from "../models/softDelete";
 
-const SEARCH_FIELDS = ["sku", "name", "barcode", "category", "variantName"];
+const SEARCH_FIELDS = ["sku", "name", "barcode", "category", "variantName", "flavorProfile"];
 const PUBLIC_FIELDS = "-createdBy -__v";
 
 const SORTS: Record<string, Record<string, 1 | -1>> = {
@@ -54,8 +54,10 @@ export function toProduct(doc: ProductDoc, stock?: number): Product {
 export function toProductDoc(input: ProductInput) {
   const { mrp, sellingPrice, costPrice, variants, images, ...rest } = input;
   void variants;
+  // Fields left out (CSV import: reels, photos) keep their saved value
+  const defined = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined)) as typeof rest;
   return {
-    ...rest,
+    ...defined,
     ...(images !== undefined && { images }),
     sku: input.sku.trim().toUpperCase(),
     mrpPaise: toPaise(mrp),
@@ -68,6 +70,7 @@ export function toProductDoc(input: ProductInput) {
 export async function productListFilter(query: ListQuery): Promise<Filter> {
   const filter: Filter = { parent: null, ...statusFilter(query.status) };
   if (query.filters.category) filter.category = query.filters.category;
+  if (query.filters.flavor) filter.flavorProfile = query.filters.flavor;
   if (query.filters.freeDelivery === "yes") filter.freeDelivery = true;
   if (query.filters.freeDelivery === "no") filter.freeDelivery = { $ne: true };
   const search = searchFilter(query.search, SEARCH_FIELDS);
@@ -135,12 +138,13 @@ export async function getProduct(id: string): Promise<Product> {
 
 /** Creates the product, its variants and their central Inventory rows (quantity 0). */
 export async function createProduct(input: ProductInput, userId: string): Promise<Product> {
-  const variants = input.variants ?? [];
+  const variants = normalizeVariants(input.variants ?? []);
   const plan = await planVariantSync(null, variants);
   const category = await canonicalCategory(input.category ?? "", userId);
   const doc = await ProductModel.create({ ...toProductDoc({ ...input, category }), hasVariants: variants.length > 0, createdBy: userId });
   await Inventory.updateOne({ product: doc._id }, { $setOnInsert: { quantity: 0 } }, { upsert: true });
-  await applyVariantSync(doc, variants, plan, userId);
+  const ids = await applyVariantSync(doc, variants, plan, userId);
+  await syncVariantStock(ids, variants, userId);
   return getProduct(String(doc._id));
 }
 
@@ -148,7 +152,7 @@ export async function createProduct(input: ProductInput, userId: string): Promis
  * Orders keep their own copy of SKU, name and price, so editing a product never changes past orders.
  * A variant (CSV import by its SKU) only takes its own fields; name and category come from its parent.
  */
-export async function updateProduct(id: string, input: ProductInput): Promise<Product> {
+export async function updateProduct(id: string, input: ProductInput, userId?: string): Promise<Product> {
   if (!isValidObjectId(id)) throw notFound("Product");
   const current = await ProductModel.findById(id).select("parent images hasVariants").lean();
   if (!current) throw notFound("Product");
@@ -162,15 +166,19 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Pr
       { runValidators: true }
     );
   } else {
-    const plan = input.variants ? await planVariantSync(id, input.variants) : null;
+    const variants = input.variants ? normalizeVariants(input.variants) : null;
+    const plan = variants ? await planVariantSync(id, variants) : null;
     const category = await canonicalCategory(input.category ?? "");
     const doc = await ProductModel.findByIdAndUpdate(
       id,
-      { ...fields, category, ...(input.variants && { hasVariants: input.variants.length > 0 }) },
+      { ...fields, category, ...(variants && { hasVariants: variants.length > 0 }) },
       { returnDocument: "after", runValidators: true }
     ).lean<ProductDoc>();
     if (!doc) throw notFound("Product");
-    if (plan && input.variants) await applyVariantSync(doc, input.variants, plan);
+    if (plan && variants) {
+      const ids = await applyVariantSync(doc, variants, plan, userId);
+      await syncVariantStock(ids, variants, userId);
+    }
     else if (doc.hasVariants) await refreshVariants(doc);
   }
 
@@ -225,6 +233,12 @@ export async function listSellableProducts({ inStock = false, search = "" } = {}
       stock: stock.get(String(d._id)) ?? 0,
     }))
     .filter((p) => !inStock || p.stock > 0);
+}
+
+/** Flavor profiles in use (list filter, form suggestions). */
+export async function listFlavorProfiles(): Promise<string[]> {
+  const values = (await ProductModel.distinct("flavorProfile", { parent: null, flavorProfile: { $nin: ["", null] } })) as string[];
+  return values.filter(Boolean).sort((a, b) => a.localeCompare(b));
 }
 
 /** Category names for list filters (all) and the product form (`activeOnly`). */

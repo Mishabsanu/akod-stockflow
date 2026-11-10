@@ -1,17 +1,17 @@
 "use client";
 
-import { Form, Formik, useField } from "formik";
+import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { Package } from "lucide-react";
 import Link from "next/link";
 import { FormCard, FormSection } from "@/components/forms/FormCard";
 import { SelectField, STATUS_OPTIONS, TextAreaField, TextField } from "@/components/forms/FormikFields";
 import { useApiSubmit } from "@/hooks/useApiSubmit";
-import type { ProductImage } from "@/lib/commerceTypes";
 import { formatCurrency } from "@/lib/format";
 import type { Product } from "@/lib/types";
-import { emptyProduct, MAX_PRODUCT_IMAGES, productSchema, type ProductInput } from "@/lib/validation/product.schema";
+import { emptyProduct, productFormSchema, type ProductInput } from "@/lib/validation/product.schema";
 import { resourceApi } from "@/services/apiClient";
-import { ProductImageGallery } from "./ProductImages";
+import { FLAVOR_SUGGESTIONS, ImagesField, InstagramReelsField, toInitialValues, ToggleField } from "./ProductFormParts";
 import { PRODUCT_UI } from "./productConfig";
 import { pendingUploads, usePendingUploads } from "./uploadTracker";
 import { VariantsEditor } from "./VariantsEditor";
@@ -23,62 +23,13 @@ interface ProductFormProps {
   categories: string[];
   /** Company setting: reorder level for new products */
   defaultReorderLevel?: number;
+  /** Flavor profiles already used, offered as suggestions */
+  flavors?: string[];
 }
 
-/** Free delivery toggle (variants follow the product). */
-function FreeDeliveryField() {
-  const [field, , helpers] = useField<boolean>("freeDelivery");
-  return (
-    <label className="flex items-start gap-2.5 p-2.5 rounded-lg border border-line bg-slate-50/60 cursor-pointer self-end">
-      <input
-        type="checkbox"
-        checked={Boolean(field.value)}
-        onChange={(e) => void helpers.setValue(e.target.checked)}
-        className="mt-0.5 w-4 h-4 accent-brand"
-      />
-      <span>
-        <span className="block text-[12px] font-semibold text-slate-700">Free Delivery</span>
-        <span className="block text-[11px] text-slate-500">Shown on the product list; applies to all its variants</span>
-      </span>
-    </label>
-  );
-}
+const FLAVOR_LIST_ID = "flavor-profile-suggestions";
 
-function ImagesField() {
-  const [field, , helpers] = useField<ProductImage[]>("images");
-  return <ProductImageGallery images={field.value ?? []} onChange={(next) => void helpers.setValue(next)} max={MAX_PRODUCT_IMAGES} />;
-}
-
-function toInitialValues(initial: Product): ProductInput {
-  return {
-    sku: initial.sku,
-    name: initial.name,
-    barcode: initial.barcode || "",
-    category: initial.category || "",
-    description: initial.description || "",
-    mrp: initial.mrp ?? 0,
-    sellingPrice: initial.sellingPrice,
-    costPrice: initial.costPrice,
-    reorderLevel: initial.reorderLevel,
-    status: initial.status,
-    freeDelivery: Boolean(initial.freeDelivery),
-    images: initial.images ?? [],
-    variants: (initial.variants ?? []).map((v) => ({
-      _id: v._id,
-      variantName: v.variantName || "",
-      sku: v.sku,
-      barcode: v.barcode || "",
-      mrp: v.mrp ?? 0,
-      sellingPrice: v.sellingPrice,
-      costPrice: v.costPrice,
-      reorderLevel: v.reorderLevel,
-      status: v.status,
-      image: v.images?.[0] ?? null,
-    })),
-  };
-}
-
-export function ProductForm({ initial, categories, defaultReorderLevel }: ProductFormProps) {
+export function ProductForm({ initial, categories, defaultReorderLevel, flavors = [] }: ProductFormProps) {
   const api = resourceApi<Product>(PRODUCT_UI.apiBase);
   const isEdit = Boolean(initial);
 
@@ -109,13 +60,14 @@ export function ProductForm({ initial, categories, defaultReorderLevel }: Produc
   };
 
   return (
-    <Formik initialValues={initialValues} validationSchema={productSchema} onSubmit={onSubmit}>
+    <Formik initialValues={initialValues} validationSchema={productFormSchema} onSubmit={onSubmit}>
       {({ isSubmitting, values }) => {
         const hasVariants = (values.variants?.length ?? 0) > 0;
         const margin = Number(values.sellingPrice) - Number(values.costPrice);
         const marginPct = Number(values.sellingPrice) > 0 ? (margin / Number(values.sellingPrice)) * 100 : 0;
         return (
           <Form noValidate>
+            <FormErrorNotice />
             <FormCard
               title={isEdit ? "Edit Product" : "Create New Product"}
               description={PRODUCT_UI.description}
@@ -143,14 +95,47 @@ export function ProductForm({ initial, categories, defaultReorderLevel }: Produc
                   hint={categoryOptions.length === 0 ? "No categories yet — add them under Products → Categories" : undefined}
                 />
                 {!hasVariants && <TextField name="barcode" label="Barcode" placeholder="Optional (EAN / UPC)" inputMode="numeric" />}
+                <TextField
+                  name="flavorProfile"
+                  label="Flavor Profile"
+                  placeholder="e.g. Traditional"
+                  hint="Used for storefront chips filter"
+                  list={FLAVOR_LIST_ID}
+                  autoComplete="off"
+                  maxLength={60}
+                />
+                <datalist id={FLAVOR_LIST_ID}>
+                  {[...new Set([...flavors, ...FLAVOR_SUGGESTIONS])].map((f) => (
+                    <option key={f} value={f} />
+                  ))}
+                </datalist>
                 <SelectField name="status" label="Status" required options={STATUS_OPTIONS} />
-                <FreeDeliveryField />
+                <ToggleField name="storefrontVisible" label="Visible on Storefront" hint="Untick to hide it from the online store" />
+                <ToggleField name="freeDelivery" label="Free Delivery" hint="Shown on the product list; applies to all its variants" />
                 <TextAreaField
-                  name="description"
-                  label="Description"
-                  placeholder="Short description (optional)"
+                  name="summary"
+                  label="Short Summary"
+                  required
+                  rows={2}
+                  placeholder="One or two lines shown on product cards"
                   className="md:col-span-2 lg:col-span-3"
-                  maxLength={1000}
+                  maxLength={300}
+                />
+                <TextAreaField
+                  name="story"
+                  label="Detailed Product Story"
+                  rows={4}
+                  placeholder="Origin, how it is made, what makes it special"
+                  className="md:col-span-2 lg:col-span-3"
+                  maxLength={5000}
+                />
+                <TextAreaField
+                  name="ingredients"
+                  label="Ingredients"
+                  rows={2}
+                  placeholder="e.g. Raw banana, coconut oil, salt"
+                  className="md:col-span-2 lg:col-span-3"
+                  maxLength={2000}
                 />
                 <p className="md:col-span-2 lg:col-span-3 -mt-2 text-[11px] text-slate-500">
                   Manage the category list under{" "}
@@ -161,13 +146,23 @@ export function ProductForm({ initial, categories, defaultReorderLevel }: Produc
                 </p>
               </FormSection>
 
+              <FormSection title="Shelf Life & Dates">
+                <TextField name="shelfLife" label="Shelf Life" placeholder="e.g. 6 months" maxLength={60} />
+                <TextField name="mfgDate" label="Mfg Date" type="date" />
+                <TextField name="expiryDate" label="Expiry Date" type="date" />
+              </FormSection>
+
               <FormSection title="Photos">
                 <ImagesField />
               </FormSection>
 
+              <FormSection title="Instagram Reel Showcase" description="Links to reels that show this product.">
+                <InstagramReelsField />
+              </FormSection>
+
               <FormSection
                 title={`Variants${hasVariants ? ` (${values.variants?.length})` : ""}`}
-                description="Sizes, packs or flavours. With variants, stock, prices and orders are kept per variant."
+                description="One row per packet weight / size. Stock, prices and orders are kept per variant."
               >
                 <VariantsEditor stockById={stockById} />
               </FormSection>

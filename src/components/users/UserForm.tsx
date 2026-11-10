@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { UserRound } from "lucide-react";
 import { useState } from "react";
 import { FormCard, FormSection } from "@/components/forms/FormCard";
@@ -51,6 +52,7 @@ export function UserForm({ initial, roleOptions }: UserFormProps) {
     <Formik initialValues={initialValues} validationSchema={isEdit ? updateUserSchema : createUserSchema} onSubmit={onSubmit}>
       {({ isSubmitting }) => (
         <Form noValidate>
+          <FormErrorNotice />
           <FormCard
             title={isEdit ? "Edit User" : "Create New User"}
             description={USER_UI.description}

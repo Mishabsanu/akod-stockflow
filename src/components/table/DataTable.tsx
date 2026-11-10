@@ -20,6 +20,8 @@ interface DataTableProps<T extends { _id: string }> {
   subRows?: (row: T) => T[] | undefined;
   /** Label for the Expand All button, e.g. "variants" */
   subRowsLabel?: string;
+  /** Show child rows open on load (user can still collapse them) */
+  defaultExpanded?: boolean;
 }
 
 const ALIGN = { left: "text-left", center: "text-center", right: "text-right" };
@@ -38,6 +40,7 @@ export function DataTable<T extends { _id: string }>({
   rowActions,
   subRows,
   subRowsLabel = "rows",
+  defaultExpanded = false,
 }: DataTableProps<T>) {
   const { get, update, isPending } = useListParams();
   const [visibleKeys, setVisibleKeys] = useState(
@@ -67,21 +70,30 @@ export function DataTable<T extends { _id: string }>({
 
   const colSpan = activeColumns.length + (rowActions ? 1 : 0);
 
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  // Rows the user flipped away from the default (open or closed), so new pages follow the default too
+  const [flipped, setFlipped] = useState<Set<string>>(() => new Set());
   const parentIds = useMemo(
     () => (subRows ? data.items.filter((r) => (subRows(r)?.length ?? 0) > 0).map((r) => r._id) : []),
     [data.items, subRows]
   );
+  const expanded = useMemo(
+    () => new Set(parentIds.filter((id) => (defaultExpanded ? !flipped.has(id) : flipped.has(id)))),
+    [parentIds, flipped, defaultExpanded]
+  );
   const allExpanded = parentIds.length > 0 && parentIds.every((id) => expanded.has(id));
   const toggleRow = useCallback((id: string) => {
-    setExpanded((prev) => {
+    setFlipped((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
   }, []);
-  const toggleAll = () => setExpanded(allExpanded ? new Set() : new Set(parentIds));
+  const toggleAll = () => {
+    const openAll = !allExpanded;
+    // Open all = nothing flipped when open is the default, everything flipped otherwise (and the reverse to close)
+    setFlipped(openAll === defaultExpanded ? new Set() : new Set(parentIds));
+  };
 
   const expandAllButton =
     parentIds.length > 0 ? (
@@ -102,7 +114,8 @@ export function DataTable<T extends { _id: string }>({
     return (
       <tr key={row._id} className={`transition-colors ${sub ? "bg-slate-50/70 hover:bg-head" : open ? "bg-brand-light/30 hover:bg-head" : "hover:bg-head"}`}>
         {activeColumns.map((col, i) => {
-          const content = col.render ? col.render(row, { sub }) : ((row as Record<string, unknown>)[col.key] as ReactNode) || "—";
+          const ctx = { sub, open, toggle: children.length > 0 ? () => toggleRow(row._id) : undefined };
+          const content = col.render ? col.render(row, ctx) : ((row as Record<string, unknown>)[col.key] as ReactNode) || "—";
           const first = i === 0 && Boolean(subRows);
           return (
             <td

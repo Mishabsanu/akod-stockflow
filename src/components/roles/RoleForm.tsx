@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { ShieldCheck } from "lucide-react";
 import { FormCard, FormSection } from "@/components/forms/FormCard";
 import { SelectField, STATUS_OPTIONS, TextAreaField, TextField } from "@/components/forms/FormikFields";
@@ -42,6 +43,7 @@ export function RoleForm({ initial }: { initial?: Role }) {
             : undefined;
         return (
           <Form noValidate>
+            <FormErrorNotice />
             <FormCard
               title={isEdit ? "Edit Role" : "Create New Role"}
               description={ROLE_UI.description}

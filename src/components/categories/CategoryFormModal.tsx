@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik, useField } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { Tags } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -86,6 +87,7 @@ export function CategoryFormModal({ category, onClose }: { category: Category | 
           }
         >
           <Form noValidate className="grid grid-cols-1 gap-3">
+            <FormErrorNotice />
             <CategoryImageField />
             <TextField name="name" label="Category Name" required placeholder="e.g. Chips" autoFocus maxLength={80} />
             <TextAreaField name="description" label="Description" placeholder="Optional" maxLength={500} />

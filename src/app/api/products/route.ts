@@ -1,5 +1,5 @@
 import { can } from "@/lib/permissions";
-import { productSchema } from "@/lib/validation/product.schema";
+import { productFormSchema } from "@/lib/validation/product.schema";
 import { AppError } from "@/server/http/errors";
 import { apiHandler, readBody } from "@/server/http/handler";
 import { parseListQuery } from "@/server/http/query";
@@ -18,10 +18,10 @@ export const GET = apiHandler("authenticated", async ({ req, user }) => {
   if (forPicker) {
     return { items: await listSellableProducts({ inStock: params.get("inStock") === "1", search: params.get("search") ?? "" }) };
   }
-  return listProducts(parseListQuery(params, ["category", "freeDelivery"]));
+  return listProducts(parseListQuery(params, ["category", "flavor", "freeDelivery"]));
 });
 
 export const POST = apiHandler({ module: "product", action: "create" }, async ({ req, user }) => {
-  const input = await readBody(req, productSchema);
+  const input = await readBody(req, productFormSchema);
   return createProduct(input, user._id);
 });

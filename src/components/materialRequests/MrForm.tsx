@@ -1,6 +1,7 @@
 "use client";
 
 import { FieldArray, Form, Formik, getIn, useFormikContext } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { ClipboardPlus, Plus, Trash2, UserRound } from "lucide-react";
 import { FormCard, FormSection } from "@/components/forms/FormCard";
 import { TextAreaField, TextField } from "@/components/forms/FormikFields";
@@ -137,6 +138,7 @@ export function MrForm({ initial, products }: { initial?: MaterialRequest; produ
     <Formik initialValues={initialValues} validationSchema={materialRequestSchema} onSubmit={onSubmit}>
       {({ isSubmitting }) => (
         <Form noValidate>
+          <FormErrorNotice />
           <FormCard
             title={isEdit ? `Edit ${initial!.mrNo}` : "New Material Request"}
             description="Ask for products to be restocked. Once approved, received quantities are added to stock."

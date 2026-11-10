@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { Building2 } from "lucide-react";
 import { FormCard, FormSection } from "@/components/forms/FormCard";
 import { TextAreaField, TextField } from "@/components/forms/FormikFields";
@@ -27,6 +28,7 @@ export function CompanyForm({ initial }: { initial: CompanySettings }) {
     <Formik initialValues={initialValues} validationSchema={companySettingSchema} onSubmit={onSubmit} enableReinitialize>
       {({ isSubmitting }) => (
         <Form noValidate>
+          <FormErrorNotice />
           <FormCard
             title="Company Settings"
             description="Printed at the top of orders. Currency is Indian Rupees (₹)."

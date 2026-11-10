@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik, type FormikHelpers } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { IndianRupee, RotateCcw, Wallet } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -154,6 +155,7 @@ function PaymentModal({
       <Formik initialValues={initial} validationSchema={orderPaymentSchema} onSubmit={submit}>
         {({ isSubmitting }) => (
           <Form noValidate className="space-y-4">
+            <FormErrorNotice />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextField name="amount" label="Amount (₹)" type="number" min={0} step="0.01" required hint={`Max ${formatCurrency(max)}`} />
               <TextField name="paymentDate" label="Payment Date" type="date" required />

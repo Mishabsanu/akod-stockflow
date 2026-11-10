@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { Store } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -61,6 +62,7 @@ export function ChannelFormModal({ channel, onClose }: { channel: Channel | "new
           }
         >
           <Form noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormErrorNotice />
             <TextField
               name="name"
               label="Channel Name"

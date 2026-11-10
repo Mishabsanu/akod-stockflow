@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik, useField } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { PackagePlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -70,6 +71,7 @@ export function StockInForm({ products, preselect }: { products: PickerProduct[]
         const q = Number(values.quantity) || 0;
         return (
           <Form noValidate className="bg-white border border-line rounded-xl">
+            <FormErrorNotice />
             <div className="px-4 py-3 border-b border-line flex items-center gap-2">
               <PackagePlus className="w-4 h-4 text-brand" />
               <h2 className="text-sm font-bold text-slate-800">Add Stock</h2>

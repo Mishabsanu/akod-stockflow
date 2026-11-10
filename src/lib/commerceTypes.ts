@@ -33,6 +33,20 @@ export interface Product {
   hasVariants?: boolean;
   /** Delivered free of charge */
   freeDelivery?: boolean;
+  /** Storefront chips filter, e.g. Traditional */
+  flavorProfile?: string;
+  summary?: string;
+  story?: string;
+  ingredients?: string;
+  shelfLife?: string;
+  /** "YYYY-MM-DD" */
+  mfgDate?: string;
+  expiryDate?: string;
+  storefrontVisible?: boolean;
+  instagramReels?: string[];
+  /** Variant packet weight / size and unit */
+  size?: string;
+  unit?: string;
   /** Variants of this product (list and detail pages) */
   variants?: Product[];
   /** Variant detail page: the parent's name */

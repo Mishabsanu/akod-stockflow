@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { Plus, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -86,6 +87,7 @@ export function ExpenseFormModal({ open, onClose, expense, accounts, channels, p
           }
         >
           <Form id={FORM_ID} noValidate className="space-y-5">
+            <FormErrorNotice />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <TextField name="expenseDate" label="Expense Date" type="date" required />
               <SelectField name="category" label="Category" required placeholder="Select category" options={EXPENSE_CATEGORY_OPTIONS} />

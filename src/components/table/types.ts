@@ -3,6 +3,10 @@ import type { Option } from "@/lib/types";
 
 export interface RenderCtx {
   sub: boolean;
+  /** Row has child rows and they are showing */
+  open?: boolean;
+  /** Show / hide this row's child rows (e.g. a "4 SKU Sizes" button) */
+  toggle?: () => void;
 }
 
 export interface Column<T> {

@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik, getIn, useFormikContext, type FormikErrors, type FormikHelpers } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { ArrowLeft, CheckCircle2, ClipboardList, Plus, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -234,6 +235,7 @@ function OrderFormBody({
 
   return (
     <Form noValidate>
+      <FormErrorNotice />
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center gap-3">
           <Link

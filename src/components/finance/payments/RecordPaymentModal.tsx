@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { Plus, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -114,6 +115,7 @@ export function RecordPaymentModal({ accounts, preset, trigger, buttonLabel = "R
               }
             >
               <Form id={FORM_ID} noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormErrorNotice />
                 {!preset && (
                   <>
                     <SelectField

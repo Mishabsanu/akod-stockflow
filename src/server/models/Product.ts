@@ -36,6 +36,18 @@ export interface ProductDoc {
   hasVariants?: boolean;
   /** Delivered free of charge (variants copy their product) */
   freeDelivery?: boolean;
+  flavorProfile?: string;
+  summary?: string;
+  story?: string;
+  ingredients?: string;
+  shelfLife?: string;
+  mfgDate?: string;
+  expiryDate?: string;
+  storefrontVisible?: boolean;
+  instagramReels?: string[];
+  /** Variant packet weight / size and unit, e.g. "250" + "g" (variantName = "250 g") */
+  size?: string;
+  unit?: string;
   createdBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -69,6 +81,17 @@ const ProductSchema = new Schema<ProductDoc>(
     variantName: { type: String, trim: true, default: "" },
     hasVariants: { type: Boolean, default: false },
     freeDelivery: { type: Boolean, default: false, index: true },
+    flavorProfile: { type: String, trim: true, default: "", index: true },
+    summary: { type: String, trim: true, default: "" },
+    story: { type: String, trim: true, default: "" },
+    ingredients: { type: String, trim: true, default: "" },
+    shelfLife: { type: String, trim: true, default: "" },
+    mfgDate: { type: String, default: "" },
+    expiryDate: { type: String, default: "" },
+    storefrontVisible: { type: Boolean, default: true },
+    instagramReels: { type: [String], default: [] },
+    size: { type: String, trim: true, default: "" },
+    unit: { type: String, trim: true, default: "" },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }

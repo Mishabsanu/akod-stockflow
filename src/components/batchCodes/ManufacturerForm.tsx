@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { Factory } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -69,6 +70,7 @@ export function ManufacturerForm({ initial }: { initial?: Manufacturer }) {
           }
         >
           <Form id={FORM_ID} noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 max-w-3xl">
+            <FormErrorNotice />
             <BatchCodesField />
             <TextField
               name="fssaiLicNo"

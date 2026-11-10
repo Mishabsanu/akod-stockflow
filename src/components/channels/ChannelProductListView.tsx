@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { Edit2, Eye, Tag, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -63,6 +64,7 @@ function ListingModal({ channelId, row, onClose }: { channelId: string; row: Cha
           }
         >
           <Form noValidate className="grid grid-cols-1 gap-4">
+            <FormErrorNotice />
             <TextField name="channelSku" label="Marketplace SKU / Listing ID" placeholder="e.g. ASIN B0XXXXXXX (optional)" />
             <TextField
               name="channelPrice"

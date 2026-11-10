@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -80,6 +81,7 @@ export function StockAdjustModal({ target, onClose }: { target: AdjustTarget | n
             }
           >
             <Form noValidate className="space-y-4">
+              <FormErrorNotice />
               <div className="grid grid-cols-2 gap-2 text-center text-xs">
                 <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
                   <p className="text-[10px] font-bold text-slate-500 uppercase">Current</p>

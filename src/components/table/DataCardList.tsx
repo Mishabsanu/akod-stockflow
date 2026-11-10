@@ -16,8 +16,8 @@ interface DataCardListProps<T extends { _id: string }> {
   onToggle?: (id: string) => void;
 }
 
-function cell<T>(col: Column<T>, row: T, sub = false): ReactNode {
-  return col.render ? col.render(row, { sub }) : ((row as Record<string, unknown>)[col.key] as ReactNode) || "—";
+function cell<T>(col: Column<T>, row: T, sub = false, open?: boolean, toggle?: () => void): ReactNode {
+  return col.render ? col.render(row, { sub, open, toggle }) : ((row as Record<string, unknown>)[col.key] as ReactNode) || "—";
 }
 
 function Card<T extends { _id: string }>({
@@ -25,18 +25,22 @@ function Card<T extends { _id: string }>({
   columns,
   rowActions,
   sub = false,
+  open,
+  toggle,
 }: {
   row: T;
   columns: Column<T>[];
   rowActions?: (row: T) => ReactNode;
   sub?: boolean;
+  open?: boolean;
+  toggle?: () => void;
 }) {
   const [title, ...fields] = columns;
   return (
     <>
       <div className="flex items-start justify-between gap-2">
         <div className={`min-w-0 text-[13px] font-semibold text-slate-900 ${title?.mono ? "font-mono" : ""}`}>
-          {title && cell(title, row, sub)}
+          {title && cell(title, row, sub, open, toggle)}
         </div>
         {rowActions && <div className="shrink-0 -mr-1">{rowActions(row)}</div>}
       </div>
@@ -45,7 +49,7 @@ function Card<T extends { _id: string }>({
           {fields.map((col) => (
             <div key={col.key} className="min-w-0">
               <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{col.label}</dt>
-              <dd className={`text-xs text-slate-700 break-words ${col.mono ? "font-mono font-semibold" : ""}`}>{cell(col, row, sub)}</dd>
+              <dd className={`text-xs text-slate-700 break-words ${col.mono ? "font-mono font-semibold" : ""}`}>{cell(col, row, sub, open, toggle)}</dd>
             </div>
           ))}
         </dl>
@@ -85,7 +89,7 @@ export function DataCardList<T extends { _id: string }>({
         const open = Boolean(expanded?.has(row._id));
         return (
           <li key={row._id} className="px-3 py-3 bg-white">
-            <Card row={row} columns={columns} rowActions={rowActions} />
+            <Card row={row} columns={columns} rowActions={rowActions} open={open} toggle={children.length ? () => onToggle?.(row._id) : undefined} />
             {children.length > 0 && (
               <>
                 <button

@@ -25,6 +25,14 @@ function toInput(p: Product): ProductInput {
     reorderLevel: p.reorderLevel,
     status: p.status,
     freeDelivery: Boolean(p.freeDelivery),
+    flavorProfile: p.flavorProfile || "",
+    summary: p.summary || "",
+    story: p.story || "",
+    ingredients: p.ingredients || "",
+    shelfLife: p.shelfLife || "",
+    mfgDate: p.mfgDate || "",
+    expiryDate: p.expiryDate || "",
+    storefrontVisible: p.storefrontVisible ?? true,
   };
 }
 
@@ -45,7 +53,7 @@ export const productsIo: IoEntity<Product> = {
   requiredField: "sku",
   // Each product row is followed by its variant rows
   rows: (params) =>
-    listProducts({ ...parseListQuery(params, ["category", "freeDelivery"]), ...ALL }).then((p) =>
+    listProducts({ ...parseListQuery(params, ["category", "flavor", "freeDelivery"]), ...ALL }).then((p) =>
       p.items.flatMap((item) => [item, ...(item.variants ?? []).map((v) => ({ ...v, parentSku: item.sku }))])
     ),
   columns: [
@@ -55,6 +63,10 @@ export const productsIo: IoEntity<Product> = {
     { header: "Variant", value: (p) => p.variantName || "", width: 16 },
     { header: "Barcode", field: "barcode", value: (p) => p.barcode || "", width: 16, aliases: ["ean"] },
     { header: "Category", field: "category", value: (p) => p.category || "", width: 18 },
+    { header: "Flavor Profile", field: "flavorProfile", value: (p) => p.flavorProfile || "", width: 16, aliases: ["flavor", "flavour"] },
+    { header: "Short Summary", field: "summary", value: (p) => p.summary || "", width: 40, aliases: ["summary"] },
+    { header: "Ingredients", field: "ingredients", value: (p) => p.ingredients || "", width: 40 },
+    { header: "Shelf Life", field: "shelfLife", value: (p) => p.shelfLife || "", width: 12 },
     { header: "Description", field: "description", value: (p) => p.description || "", width: 40 },
     { header: "MRP", field: "mrp", value: (p) => p.mrp ?? 0, numeric: true, width: 12, aliases: ["maxretailprice"] },
     { header: "Selling Price", field: "sellingPrice", value: (p) => p.sellingPrice, numeric: true, width: 14, aliases: ["price", "sp"] },

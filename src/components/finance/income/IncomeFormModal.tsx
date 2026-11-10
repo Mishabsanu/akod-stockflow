@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { HandCoins, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -69,6 +70,7 @@ export function IncomeForm({ accounts }: { accounts: AccountOption[] }) {
           }
         >
           <Form id={FORM_ID} noValidate className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3">
+            <FormErrorNotice />
             <TextField name="txnDate" label="Date" type="date" required />
             <SelectField name="category" label="Category" required options={INCOME_CATEGORY_OPTIONS} />
             <TextField name="amount" label="Amount (₹)" type="number" min={0} step="0.01" required />

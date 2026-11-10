@@ -11,12 +11,13 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { DetailCard, DetailItem, DetailSection } from "@/components/ui/DetailCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatCurrency, formatDateTime, formatNumber } from "@/lib/format";
+import { formatDay } from "@/lib/indiaDate";
 import { can } from "@/lib/permissions";
 import { getPageAccess } from "@/server/auth/session";
 import { parseListQuery } from "@/server/http/query";
 import { channelsForProduct } from "@/server/services/channel.service";
 import { recentTransactionsFor } from "@/server/services/inventory.service";
-import { getProduct, listCategories, listProducts } from "@/server/services/product.service";
+import { getProduct, listCategories, listFlavorProfiles, listProducts } from "@/server/services/product.service";
 import { orNotFound } from "@/server/utils/pageData";
 import { getCompanySettings } from "@/server/services/setting.service";
 import { ProductForm } from "./ProductForm";
@@ -30,7 +31,11 @@ type Params = Promise<{ id: string }>;
 export async function ProductListPage({ searchParams }: { searchParams: SearchParams }) {
   const { user, allowed } = await getPageAccess("product", "view");
   if (!allowed) return <AccessDenied />;
-  const [data, categories] = await Promise.all([listProducts(parseListQuery(await searchParams, ["category", "freeDelivery"])), listCategories()]);
+  const [data, categories, flavors] = await Promise.all([
+    listProducts(parseListQuery(await searchParams, ["category", "flavor", "freeDelivery"])),
+    listCategories(),
+    listFlavorProfiles(),
+  ]);
 
   return (
     <div className="space-y-4">
@@ -49,7 +54,7 @@ export async function ProductListPage({ searchParams }: { searchParams: SearchPa
           </>
         }
       />
-      <ProductListView data={data} categories={categories} />
+      <ProductListView data={data} categories={categories} flavors={flavors} />
     </div>
   );
 }
@@ -57,17 +62,17 @@ export async function ProductListPage({ searchParams }: { searchParams: SearchPa
 export async function ProductCreatePage() {
   const { allowed } = await getPageAccess("product", "create");
   if (!allowed) return <AccessDenied />;
-  const [categories, settings] = await Promise.all([listCategories({ activeOnly: true }), getCompanySettings()]);
-  return <ProductForm categories={categories} defaultReorderLevel={settings.defaultReorderLevel} />;
+  const [categories, settings, flavors] = await Promise.all([listCategories({ activeOnly: true }), getCompanySettings(), listFlavorProfiles()]);
+  return <ProductForm categories={categories} defaultReorderLevel={settings.defaultReorderLevel} flavors={flavors} />;
 }
 
 export async function ProductEditPage({ params }: { params: Params }) {
   const { allowed } = await getPageAccess("product", "update");
   if (!allowed) return <AccessDenied />;
-  const [product, categories] = await Promise.all([orNotFound(getProduct((await params).id)), listCategories({ activeOnly: true })]);
+  const [product, categories, flavors] = await Promise.all([orNotFound(getProduct((await params).id)), listCategories({ activeOnly: true }), listFlavorProfiles()]);
   // Variants are edited on their product's form
   if (product.parent) redirect(`${PRODUCT_UI.basePath}/${product.parent}/edit`);
-  return <ProductForm initial={product} categories={categories} />;
+  return <ProductForm initial={product} categories={categories} flavors={flavors} />;
 }
 
 export async function ProductDetailPage({ params }: { params: Params }) {
@@ -121,7 +126,35 @@ export async function ProductDetailPage({ params }: { params: Params }) {
           {product.variantName && <DetailItem label="Variant / Size" value={product.variantName} />}
           <DetailItem label="Category" value={product.category} />
           <DetailItem label="Barcode" value={product.barcode} mono />
-          <DetailItem label="Description" value={product.description} />
+          {!product.parent && (
+            <>
+              <DetailItem label="Flavor Profile" value={product.flavorProfile} />
+              <DetailItem label="Storefront" value={product.storefrontVisible === false ? "Hidden" : "Visible"} />
+              <DetailItem label="Free Delivery" value={product.freeDelivery ? "Yes" : "No"} />
+              <DetailItem label="Short Summary" value={product.summary || product.description} />
+              <DetailItem label="Detailed Product Story" value={product.story ? <span className="whitespace-pre-line">{product.story}</span> : ""} />
+              <DetailItem label="Ingredients" value={product.ingredients} />
+              <DetailItem label="Shelf Life" value={product.shelfLife} />
+              <DetailItem label="Mfg Date" value={product.mfgDate ? formatDay(product.mfgDate) : ""} />
+              <DetailItem label="Expiry Date" value={product.expiryDate ? formatDay(product.expiryDate) : ""} />
+              <DetailItem
+                label={`Instagram Reels (${product.instagramReels?.length ?? 0})`}
+                value={
+                  product.instagramReels?.length ? (
+                    <span className="flex flex-col gap-1">
+                      {product.instagramReels.map((u) => (
+                        <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline truncate">
+                          {u}
+                        </a>
+                      ))}
+                    </span>
+                  ) : (
+                    ""
+                  )
+                }
+              />
+            </>
+          )}
         </DetailSection>
 
         {!isGroup && (
