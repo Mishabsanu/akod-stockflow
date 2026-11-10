@@ -13,7 +13,9 @@ import { emptyProduct, MAX_PRODUCT_IMAGES, productSchema, type ProductInput } fr
 import { resourceApi } from "@/services/apiClient";
 import { ProductImageGallery } from "./ProductImages";
 import { PRODUCT_UI } from "./productConfig";
+import { pendingUploads, usePendingUploads } from "./uploadTracker";
 import { VariantsEditor } from "./VariantsEditor";
+import { toast } from "sonner";
 
 interface ProductFormProps {
   initial?: Product;
@@ -90,11 +92,21 @@ export function ProductForm({ initial, categories, defaultReorderLevel }: Produc
     .map((c) => ({ label: c, value: c }));
   const stockById = Object.fromEntries((initial?.variants ?? []).map((v) => [v._id, v.stock ?? 0]));
 
-  const onSubmit = useApiSubmit<ProductInput, Product>({
+  const uploads = usePendingUploads();
+  const save = useApiSubmit<ProductInput, Product>({
     request: (values) => (initial ? api.update(initial._id, values) : api.create(values)),
     successMessage: isEdit ? "Product updated" : "Product created",
     redirectTo: (p) => `${PRODUCT_UI.basePath}/${p._id}`,
   });
+  // Photos upload in the background: save only once they are all in
+  const onSubmit: typeof save = async (values, helpers) => {
+    if (pendingUploads() > 0) {
+      toast.info("Photos are still uploading — save again in a moment");
+      helpers.setSubmitting(false);
+      return;
+    }
+    return save(values, helpers);
+  };
 
   return (
     <Formik initialValues={initialValues} validationSchema={productSchema} onSubmit={onSubmit}>
@@ -111,7 +123,7 @@ export function ProductForm({ initial, categories, defaultReorderLevel }: Produc
               icon={<Package className="w-4.5 h-4.5" />}
               backHref={initial ? `${PRODUCT_UI.basePath}/${initial._id}` : PRODUCT_UI.basePath}
               submitLabel="Save Product"
-              submitting={isSubmitting}
+              submitting={isSubmitting || uploads > 0}
             >
               <FormSection title="Product Details">
                 <TextField
