@@ -2,7 +2,7 @@
 
 import { Edit2, Eye, Plus } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { usePermission } from "@/components/providers/SessionProvider";
 import { DataTable } from "@/components/table/DataTable";
 import { RowActions } from "@/components/table/RowActions";
@@ -10,26 +10,21 @@ import { STATUS_FILTER, type Column } from "@/components/table/types";
 import { StatusBadge } from "@/components/ui/Badge";
 import type { Manufacturer } from "@/lib/batchCodeTypes";
 import type { Paginated } from "@/lib/types";
-import { ManufacturerFormModal } from "./ManufacturerFormModal";
 
 const iconBtn = "p-1 rounded text-slate-400 hover:text-brand hover:bg-brand-light transition-colors";
 const SHOWN_CODES = 10;
 export const BASE = "/dashboard/production";
 
+/** Header button: opens the New Batch Number page. */
 export function NewManufacturerButton() {
-  const [open, setOpen] = useState(false);
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 bg-brand hover:bg-brand-dark text-white rounded-lg px-3.5 py-2 font-bold text-xs shadow-xs transition"
-      >
-        <Plus className="w-4 h-4" />
-        New Batch Number
-      </button>
-      <ManufacturerFormModal manufacturer={open ? "new" : null} onClose={() => setOpen(false)} />
-    </>
+    <Link
+      href={`${BASE}/new`}
+      className="inline-flex items-center gap-1.5 bg-brand hover:bg-brand-dark text-white rounded-lg px-3.5 py-2 font-bold text-xs shadow-xs transition"
+    >
+      <Plus className="w-4 h-4" />
+      New Batch Number
+    </Link>
   );
 }
 
@@ -55,7 +50,6 @@ export function CodeChips({ codes, highlight, limit }: { codes: string[]; highli
 export function ManufacturerListView({ data }: { data: Paginated<Manufacturer> }) {
   const canEdit = usePermission("production", "update");
   const canDelete = usePermission("production", "delete");
-  const [editing, setEditing] = useState<Manufacturer | null>(null);
 
   const columns = useMemo<Column<Manufacturer>[]>(
     () => [
@@ -102,15 +96,14 @@ export function ManufacturerListView({ data }: { data: Paginated<Manufacturer> }
               <Eye className="w-3.5 h-3.5" />
             </Link>
             {canEdit && (
-              <button type="button" title="Edit" className={iconBtn} onClick={() => setEditing(m)}>
+              <Link href={`${BASE}/${m._id}/edit`} title="Edit" className={iconBtn}>
                 <Edit2 className="w-3.5 h-3.5" />
-              </button>
+              </Link>
             )}
             {canDelete && <RowActions entityLabel="Batch Number" itemName={`${m.batchCodes.join(", ")} — ${m.name}`} deleteUrl={`/api/manufacturers/${m._id}`} />}
           </div>
         )}
       />
-      <ManufacturerFormModal manufacturer={editing} onClose={() => setEditing(null)} />
     </>
   );
 }

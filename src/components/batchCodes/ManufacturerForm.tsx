@@ -4,42 +4,43 @@ import { Form, Formik } from "formik";
 import { Factory } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { FormSurface } from "@/components/forms/FormSurface";
 import { SelectField, STATUS_OPTIONS, TextAreaField, TextField } from "@/components/forms/FormikFields";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import type { Manufacturer } from "@/lib/batchCodeTypes";
 import { emptyManufacturer, manufacturerSchema, type ManufacturerInput } from "@/lib/validation/manufacturer.schema";
 import { ApiError, resourceApi } from "@/services/apiClient";
 import { BatchCodesField } from "./BatchCodesField";
 
 const api = resourceApi<Manufacturer>("/api/manufacturers");
+export const BATCH_BASE = "/dashboard/production";
+const FORM_ID = "batch-number-form";
 
-/** Create / edit a batch-number record (company, address, FSSAI). `manufacturer` = null → closed; "new" → create. */
-export function ManufacturerFormModal({ manufacturer, onClose }: { manufacturer: Manufacturer | "new" | null; onClose: () => void }) {
+/** New / Edit Batch Number — full page: batch number(s), FSSAI licence, company name, address. */
+export function ManufacturerForm({ initial }: { initial?: Manufacturer }) {
   const router = useRouter();
-  if (!manufacturer) return null;
-  const editing = manufacturer !== "new" ? manufacturer : null;
-  const initial: ManufacturerInput = editing
+  const backHref = initial ? `${BATCH_BASE}/${initial._id}` : BATCH_BASE;
+  const values: ManufacturerInput = initial
     ? {
-        name: editing.name,
-        address: editing.address,
-        fssaiLicNo: editing.fssaiLicNo,
-        batchCodes: editing.batchCodes,
-        phone: editing.phone ?? "",
-        notes: editing.notes ?? "",
-        status: editing.status,
+        name: initial.name,
+        address: initial.address,
+        fssaiLicNo: initial.fssaiLicNo,
+        batchCodes: initial.batchCodes,
+        phone: initial.phone ?? "",
+        notes: initial.notes ?? "",
+        status: initial.status,
       }
     : emptyManufacturer;
 
   return (
     <Formik
-      initialValues={initial}
+      initialValues={values}
       validationSchema={manufacturerSchema}
-      onSubmit={async (values, helpers) => {
+      onSubmit={async (input, helpers) => {
         try {
-          const saved = editing ? await api.update(editing._id, values) : await api.create(values);
-          toast.success(editing ? "Batch number updated" : `Saved for ${saved.name}`);
-          onClose();
+          const saved = initial ? await api.update(initial._id, input) : await api.create(input);
+          toast.success(initial ? "Batch number updated" : `Saved for ${saved.name}`);
+          router.push(`${BATCH_BASE}/${saved._id}`);
           router.refresh();
         } catch (e) {
           if (e instanceof ApiError && e.fieldErrors) helpers.setErrors(e.fieldErrors as never);
@@ -49,26 +50,25 @@ export function ManufacturerFormModal({ manufacturer, onClose }: { manufacturer:
         }
       }}
     >
-      {({ isSubmitting, submitForm }) => (
-        <Modal
-          open
-          onClose={onClose}
-          title={editing ? "Edit Batch Number" : "New Batch Number"}
+      {({ isSubmitting }) => (
+        <FormSurface
+          page={{ backHref }}
+          onClose={() => router.push(backHref)}
+          title={initial ? "Edit Batch Number" : "New Batch Number"}
           subtitle="Batch number on the pack, with the FSSAI licence, company and address that made it"
           icon={<Factory className="w-4 h-4" />}
-          size="md"
           footer={
             <>
-              <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+              <Button variant="outline" onClick={() => router.push(backHref)} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button onClick={submitForm} loading={isSubmitting}>
-                {editing ? "Save Changes" : "Save"}
+              <Button type="submit" form={FORM_ID} loading={isSubmitting}>
+                {initial ? "Save Changes" : "Save"}
               </Button>
             </>
           }
         >
-          <Form noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Form id={FORM_ID} noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 max-w-3xl">
             <BatchCodesField />
             <TextField
               name="fssaiLicNo"
@@ -77,8 +77,9 @@ export function ManufacturerFormModal({ manufacturer, onClose }: { manufacturer:
               placeholder="14 digits"
               inputMode="numeric"
               maxLength={14}
-              className="sm:col-span-2 [&_input]:font-mono"
+              className="[&_input]:font-mono"
             />
+            <SelectField name="status" label="Status" required options={STATUS_OPTIONS} />
             <TextField
               name="name"
               label="Company Name"
@@ -95,9 +96,8 @@ export function ManufacturerFormModal({ manufacturer, onClose }: { manufacturer:
               maxLength={500}
               className="sm:col-span-2"
             />
-            <SelectField name="status" label="Status" required options={STATUS_OPTIONS} hint="Inactive = not found in lookup" />
           </Form>
-        </Modal>
+        </FormSurface>
       )}
     </Formik>
   );

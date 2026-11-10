@@ -10,7 +10,7 @@ import { parseListQuery } from "@/server/http/query";
 import { getManufacturer, listManufacturers } from "@/server/services/manufacturer.service";
 import { orNotFound } from "@/server/utils/pageData";
 import { formatDateTime } from "@/lib/format";
-import { BatchLookup } from "./BatchLookup";
+import { ManufacturerForm } from "./ManufacturerForm";
 import { ManufacturerDetailActions } from "./ManufacturerDetailActions";
 import { BASE, CodeChips, ManufacturerListView, NewManufacturerButton } from "./ManufacturerListView";
 
@@ -32,14 +32,18 @@ export async function ManufacturerListPage({ searchParams }: { searchParams: Sea
   );
 }
 
-export async function BatchLookupPage() {
-  const { allowed } = await getPageAccess("production", "view");
+/** New Batch Number — full page. */
+export async function ManufacturerCreatePage() {
+  const { allowed } = await getPageAccess("production", "create");
   if (!allowed) return <AccessDenied />;
-  return (
-    <div className="py-4">
-      <BatchLookup />
-    </div>
-  );
+  return <ManufacturerForm />;
+}
+
+/** Edit Batch Number — full page. */
+export async function ManufacturerEditPage({ params }: { params: Promise<{ id: string }> }) {
+  const { allowed } = await getPageAccess("production", "update");
+  if (!allowed) return <AccessDenied />;
+  return <ManufacturerForm initial={await orNotFound(getManufacturer((await params).id))} />;
 }
 
 export async function ManufacturerDetailPage({ params }: { params: Promise<{ id: string }> }) {

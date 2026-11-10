@@ -56,7 +56,6 @@ export const NAV_MODULES: NavModule[] = [
     basePath: "/dashboard/production",
     items: [
       { label: "Batch Numbers", href: "/dashboard/production", permission: "production" },
-      { label: "Batch Lookup", href: "/dashboard/production/lookup", permission: "production" },
     ],
   },
   {
