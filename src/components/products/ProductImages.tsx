@@ -127,7 +127,7 @@ export function ProductImageGallery({
   };
 
   return (
-    <div className="md:col-span-2 lg:col-span-3 space-y-3">
+    <div className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
           <span className="w-8 h-8 rounded-lg bg-brand-light border border-brand-border text-brand flex items-center justify-center shrink-0">
@@ -148,7 +148,7 @@ export function ProductImageGallery({
 
       <input ref={input} type="file" multiple accept={IMAGE_ACCEPT} className="hidden" onChange={(e) => pick(e.target.files)} />
 
-      <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <ul className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2.5">
         {images.map((img, i) => (
           <li
             key={img.publicId}

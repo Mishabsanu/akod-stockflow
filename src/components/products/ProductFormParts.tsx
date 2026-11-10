@@ -1,6 +1,7 @@
 "use client";
 
 import { FieldArray, useField, useFormikContext } from "formik";
+import type { ReactNode } from "react";
 import { Clapperboard, Plus, Trash2 } from "lucide-react";
 import { TextField } from "@/components/forms/FormikFields";
 import { Button } from "@/components/ui/Button";
@@ -11,11 +12,24 @@ import { ProductImageGallery } from "./ProductImages";
 
 export const FLAVOR_SUGGESTIONS = ["Traditional", "Classic", "Salted", "Sweet", "Spicy", "Tangy", "Masala", "Cheesy", "Peri Peri", "Mint"];
 
+/** Bordered block with a small heading: groups the product form into clean cards. */
+export function Panel({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-xl border border-line bg-white p-4 space-y-3">
+      <div>
+        <h2 className="text-xs font-bold text-brand uppercase tracking-wider">{title}</h2>
+        {description && <p className="text-[11px] text-slate-500 mt-0.5">{description}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 /** Checkbox card, e.g. Free Delivery, Visible on Storefront. */
 export function ToggleField({ name, label, hint }: { name: "freeDelivery" | "storefrontVisible"; label: string; hint: string }) {
   const [field, , helpers] = useField<boolean>(name);
   return (
-    <label className="flex items-start gap-2.5 p-2.5 rounded-lg border border-line bg-slate-50/60 cursor-pointer self-end">
+    <label className="flex items-start gap-2.5 p-2.5 rounded-lg border border-line bg-slate-50/60 cursor-pointer">
       <input type="checkbox" checked={Boolean(field.value)} onChange={(e) => void helpers.setValue(e.target.checked)} className="mt-0.5 w-4 h-4 accent-brand" />
       <span>
         <span className="block text-[12px] font-semibold text-slate-700">{label}</span>
@@ -37,7 +51,7 @@ export function InstagramReelsField() {
   return (
     <FieldArray name="instagramReels">
       {({ push, remove }) => (
-        <div className="md:col-span-2 lg:col-span-3 space-y-2">
+        <div className="space-y-2">
           {reels.length === 0 && <p className="text-[11px] text-slate-500">No reels yet. Add links to Instagram reels that show this product.</p>}
           {reels.map((_, i) => (
             <div key={i} className="flex items-end gap-2">
@@ -47,7 +61,7 @@ export function InstagramReelsField() {
                 label={`Reel ${i + 1}`}
                 placeholder="https://www.instagram.com/reel/…"
                 inputMode="url"
-                className="flex-1"
+                className="flex-1 min-w-0"
               />
               <button
                 type="button"

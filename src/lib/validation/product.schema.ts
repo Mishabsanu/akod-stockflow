@@ -112,8 +112,17 @@ export const productSchema = Yup.object({
   return true;
 });
 
-/** Product form / API: same as productSchema, with Short summary required (CSV import may leave it blank). */
-export const productFormSchema = productSchema.shape({ summary: requiredText("Short summary", 300) });
+/**
+ * Product form / API: same as productSchema, plus Short summary required and at least one variant —
+ * prices and stock live on the variants. (CSV import uses productSchema and may leave both out.)
+ */
+export const productFormSchema = productSchema.shape({
+  summary: requiredText("Short summary", 300),
+  variants: Yup.array(variantSchema)
+    .min(1, "Add at least one variant — prices and stock are set per variant")
+    .max(MAX_VARIANTS, `At most ${MAX_VARIANTS} variants`)
+    .required("Add at least one variant"),
+});
 
 export type ProductInput = Yup.InferType<typeof productSchema>;
 
