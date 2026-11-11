@@ -1,7 +1,47 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { DOCUMENT_TYPES, MAX_DOCUMENT_BYTES, type AttachedDocument, type DocumentFolder } from "@/lib/documents";
+import { DOCUMENT_FOLDERS, DOCUMENT_TYPES, MAX_DOCUMENT_BYTES, type AttachedDocument, type DocumentFolder } from "@/lib/documents";
+import { can, type PermissionModule } from "@/lib/permissions";
+import type { SessionUser } from "@/lib/types";
 import { AppError } from "../http/errors";
+
+/** Which permission a folder needs (create or update on that module). */
+const FOLDER_MODULE: Record<DocumentFolder, PermissionModule> = {
+  expenses: "expense",
+  payments: "payment",
+  stock: "stock",
+  products: "product",
+  product_variants: "product",
+  categories: "category",
+};
+
+/** Folders that only hold photos: direct uploads there are limited to image formats. */
+const IMAGE_FOLDERS: DocumentFolder[] = ["products", "product_variants", "categories"];
+
+/** Throws unless `folder` is known and the user may add files to it. */
+export function assertUploadAllowed(user: SessionUser, folder: string | null): DocumentFolder {
+  if (!folder || !DOCUMENT_FOLDERS.includes(folder as DocumentFolder)) throw new AppError("Unknown upload folder", 422);
+  const mod = FOLDER_MODULE[folder as DocumentFolder];
+  if (!can(user, mod, "create") && !can(user, mod, "update")) {
+    throw new AppError("You do not have permission to perform this action", 403);
+  }
+  return folder as DocumentFolder;
+}
+
+/**
+ * Signed parameters for a direct browser → Cloudinary upload, so large files never pass through
+ * this server (Vercel caps request bodies at ~4.5 MB). Valid for Cloudinary's 1-hour window.
+ */
+export function signDirectUpload(folder: DocumentFolder) {
+  const { cloud, key, secret } = config();
+  const root = (process.env.CLOUDINARY_FOLDER || "akod-eco").replace(/^\/+|\/+$/g, "");
+  const params: Record<string, string> = {
+    folder: `${root}/${folder}`,
+    timestamp: String(Math.floor(Date.now() / 1000)),
+  };
+  if (IMAGE_FOLDERS.includes(folder)) params.allowed_formats = "jpg,jpeg,png,webp";
+  return { cloudName: cloud, apiKey: key, params, signature: sign(params, secret) };
+}
 
 function config() {
   const cloud = process.env.CLOUDINARY_CLOUD_NAME;

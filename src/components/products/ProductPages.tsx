@@ -11,7 +11,6 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { DetailCard, DetailItem, DetailSection } from "@/components/ui/DetailCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatCurrency, formatDateTime, formatNumber } from "@/lib/format";
-import { formatDay } from "@/lib/indiaDate";
 import { can } from "@/lib/permissions";
 import { getPageAccess } from "@/server/auth/session";
 import { parseListQuery } from "@/server/http/query";
@@ -134,9 +133,6 @@ export async function ProductDetailPage({ params }: { params: Params }) {
               <DetailItem label="Short Summary" value={product.summary || product.description} />
               <DetailItem label="Detailed Product Story" value={product.story ? <span className="whitespace-pre-line">{product.story}</span> : ""} />
               <DetailItem label="Ingredients" value={product.ingredients} />
-              <DetailItem label="Shelf Life" value={product.shelfLife} />
-              <DetailItem label="Mfg Date" value={product.mfgDate ? formatDay(product.mfgDate) : ""} />
-              <DetailItem label="Expiry Date" value={product.expiryDate ? formatDay(product.expiryDate) : ""} />
               <DetailItem
                 label={`Instagram Reels (${product.instagramReels?.length ?? 0})`}
                 value={

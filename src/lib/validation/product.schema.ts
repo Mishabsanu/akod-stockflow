@@ -4,7 +4,7 @@ import { optionalDay, optionalObjectId, optionalText, requiredText, rupees, stat
 
 export const SKU_PATTERN = /^[A-Za-z0-9\-_/.]+$/;
 export const MAX_VARIANTS = 100;
-export const MAX_PRODUCT_IMAGES = 12;
+export const MAX_PRODUCT_IMAGES = 30;
 
 const skuField = () => requiredText("SKU code", 40).matches(SKU_PATTERN, "SKU may only contain letters, numbers and - _ / .");
 
@@ -36,7 +36,7 @@ export const variantLabel = (size: string, unit: string) => `${String(size).trim
 
 /**
  * A sellable version of a product (packet weight / size). The form asks for SKU (typed by the user),
- * size, unit, selling price and stock units; the name ("250 g") is derived on the server, and MRP / cost /
+ * size, unit, selling price, MRP and stock units; the name ("250 g") is derived on the server, and cost /
  * barcode / reorder level / status keep their saved values (or defaults for a new variant).
  */
 export const variantSchema = Yup.object({
@@ -47,10 +47,11 @@ export const variantSchema = Yup.object({
   sellingPrice: sellingPriceField(),
   /** Stock on hand after saving; a change is posted as an opening stock / adjustment entry */
   stock: wholeNumber("Stock units", 0).max(10000000, "Stock units is too large"),
+  /** Printed price; the storefront shows the saving against it (0 = not set) */
+  mrp: mrpField(),
   // Not on the form — kept as saved (CSV / older variants)
   variantName: optionalText("Variant name", 80),
   barcode: optionalText("Barcode", 40),
-  mrp: mrpField(),
   costPrice: rupees("Cost price"),
   reorderLevel: wholeNumber("Reorder level", 0).default(10),
   status: statusField,

@@ -6,20 +6,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/format";
 import { DOCUMENT_ACCEPT, formatBytes, isImageDocument, MAX_DOCUMENTS, type AttachedDocument, type DocumentFolder } from "@/lib/documents";
+import { uploadDirect } from "./directUpload";
 
-/** Uploads files to /api/uploads; the caller decides where the returned documents are saved. */
+/**
+ * Uploads files straight to Cloudinary (3 at a time, photos shrunk first); the caller decides where
+ * the returned documents are saved. No size limit from this server, since files never pass through it.
+ */
 export async function uploadFiles(files: File[], folder: DocumentFolder): Promise<AttachedDocument[]> {
-  const form = new FormData();
-  files.forEach((f) => form.append("files", f));
-  let res: Response;
-  try {
-    res = await fetch(`/api/uploads?folder=${folder}`, { method: "POST", body: form, credentials: "same-origin" });
-  } catch {
-    throw new Error("Network error. Check your connection and try again.");
-  }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || "Upload failed");
-  return data.documents as AttachedDocument[];
+  return Promise.all(files.map((f) => uploadDirect(f, folder)));
 }
 
 interface DocumentListProps {

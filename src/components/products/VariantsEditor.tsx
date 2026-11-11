@@ -16,13 +16,13 @@ import {
 
 const UNIT_OPTIONS = VARIANT_UNITS.map((u) => ({ value: u, label: VARIANT_UNIT_LABELS[u] }));
 
-/** One line per variant: SKU · size · unit · price · stock · remove. */
-const ROW = "grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_2rem]";
+/** One line per variant: SKU · size · unit · selling price · MRP · stock · remove. */
+const ROW = "grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_minmax(0,1fr)_2rem]";
 // Same columns from the sm breakpoint up (written out in full so Tailwind generates it)
-const ROW_SM = "sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_2rem]";
+const ROW_SM = "sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_minmax(0,1fr)_2rem]";
 
 /**
- * Variants (packet weight / size): SKU, size, unit, selling price and stock units.
+ * Variants (packet weight / size): SKU, size, unit, selling price, MRP and stock units.
  * Stock units post an opening stock / adjustment entry when saved. Rows stack on phones.
  */
 export function VariantsEditor({ stockById }: { stockById: Record<string, number> }) {
@@ -39,7 +39,7 @@ export function VariantsEditor({ stockById }: { stockById: Record<string, number
             <div className="border border-dashed border-slate-300 rounded-lg px-4 py-5 text-center">
               <Layers className="w-6 h-6 mx-auto text-slate-300" />
               <p className="text-xs font-semibold text-slate-700 mt-1">Add at least one variant</p>
-              <p className="text-[11px] text-slate-500">Each packet weight / size has its own SKU, price and stock, e.g. 250 g, 500 g, 1 kg.</p>
+              <p className="text-[11px] text-slate-500">Each packet weight / size has its own SKU, selling price, MRP and stock, e.g. 250 g, 500 g, 1 kg.</p>
             </div>
           ) : (
             <div className="border border-line rounded-lg overflow-hidden">
@@ -55,8 +55,9 @@ export function VariantsEditor({ stockById }: { stockById: Record<string, number
                   Unit <span className="text-rose-500">*</span>
                 </span>
                 <span>
-                  Price (₹) <span className="text-rose-500">*</span>
+                  Selling Price (₹) <span className="text-rose-500">*</span>
                 </span>
+                <span>MRP (₹)</span>
                 <span>Stock Units</span>
                 <span />
               </div>
@@ -76,7 +77,16 @@ export function VariantsEditor({ stockById }: { stockById: Record<string, number
                         />
                         <TextField name={`variants.${i}.size`} label="Weight / Size" required placeholder="250" inputMode="decimal" />
                         <SelectField name={`variants.${i}.unit`} label="Unit" required options={UNIT_OPTIONS} />
-                        <TextField name={`variants.${i}.sellingPrice`} label="Price (₹)" required type="number" min={0} step="0.01" inputMode="decimal" />
+                        <TextField name={`variants.${i}.sellingPrice`} label="Selling Price (₹)" required type="number" min={0} step="0.01" inputMode="decimal" />
+                        <TextField
+                          name={`variants.${i}.mrp`}
+                          label="MRP (₹)"
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          inputMode="decimal"
+                          placeholder="Optional"
+                        />
                         <TextField name={`variants.${i}.stock`} label="Stock Units" type="number" min={0} step={1} inputMode="numeric" />
                         <button
                           type="button"

@@ -1,15 +1,17 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ImageIcon, ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, ImageIcon, ImagePlus, Loader2, RotateCcw, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { uploadFiles } from "@/components/documents/DocumentList";
+import { uploadDirect } from "@/components/documents/directUpload";
 import { Button } from "@/components/ui/Button";
 import type { ProductImage } from "@/lib/commerceTypes";
-import { IMAGE_ACCEPT, MAX_DOCUMENT_BYTES } from "@/lib/documents";
+import { IMAGE_ACCEPT } from "@/lib/documents";
 import { trackUpload } from "./uploadTracker";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+/** Photos are shrunk in the browser before upload, so large camera files are fine. */
+const MAX_PICK_BYTES = 30 * 1024 * 1024;
 
 type ImageFolder = "products" | "product_variants" | "categories";
 
@@ -31,56 +33,100 @@ export function ProductThumb({ image, size = 32, className = "" }: { image?: Pro
   );
 }
 
-/** Checks type / size in the browser so the user gets the message before uploading. */
+/** Checks type / size in the browser; skips files that cannot be used and keeps the rest. */
 function pickable(list: FileList | null, room: number): File[] {
   const files = Array.from(list ?? []);
-  const bad = files.find((f) => !IMAGE_TYPES.includes(f.type));
-  if (bad) {
-    toast.error(`${bad.name}: only PNG, JPG or WebP images`);
-    return [];
-  }
-  const big = files.find((f) => f.size > MAX_DOCUMENT_BYTES);
-  if (big) {
-    toast.error(`${big.name} is larger than 10 MB`);
-    return [];
-  }
-  if (files.length > room) toast.error(`Only ${room} more photo(s) can be added`);
-  return files.slice(0, Math.max(0, room));
+  const bad = files.filter((f) => !IMAGE_TYPES.includes(f.type));
+  const big = files.filter((f) => IMAGE_TYPES.includes(f.type) && f.size > MAX_PICK_BYTES);
+  if (bad.length) toast.error(`${bad.length === 1 ? bad[0].name : `${bad.length} files`}: only PNG, JPG or WebP images`);
+  if (big.length) toast.error(`${big.length === 1 ? big[0].name : `${big.length} files`} larger than 30 MB skipped`);
+  const ok = files.filter((f) => !bad.includes(f) && !big.includes(f));
+  if (ok.length > room) toast.error(`Only ${room} more photo(s) can be added, so the first ${room} were taken`);
+  return ok.slice(0, Math.max(0, room));
 }
 
-/** Uploads one file to Cloudinary <CLOUDINARY_FOLDER>/<folder>; counted so forms wait for it before saving. */
-function uploadOne(file: File, folder: ImageFolder): Promise<ProductImage | null> {
-  return trackUpload(
-    uploadFiles([file], folder)
-      .then(([d]) => (d ? { url: d.url, publicId: d.publicId, resourceType: d.resourceType, name: d.name, size: d.size } : null))
-      .catch((e: unknown) => {
-        toast.error(e instanceof Error ? e.message : `Upload failed for ${file.name}`);
-        return null;
-      })
-  );
+const toImage = (d: { url: string; publicId: string; resourceType: string; name: string; size: number }): ProductImage => ({
+  url: d.url,
+  publicId: d.publicId,
+  resourceType: d.resourceType,
+  name: d.name,
+  size: d.size,
+});
+
+/** Uploads one file straight to Cloudinary <CLOUDINARY_FOLDER>/<folder>; counted so forms wait for it before saving. */
+function uploadOne(file: File, folder: ImageFolder, onProgress?: (f: number) => void): Promise<ProductImage> {
+  return trackUpload(uploadDirect(file, folder, { onProgress }).then(toImage));
 }
 
 interface Pending {
   id: string;
+  file: File;
   preview: string;
+  /** 0..1 while uploading; null while waiting in the queue */
+  progress: number | null;
+  error?: string;
 }
 
 /** Local previews of files still uploading (revoked when done). */
 function usePending() {
   const [pending, setPending] = useState<Pending[]>([]);
   const add = (file: File): Pending => {
-    const p = { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, preview: URL.createObjectURL(file) };
+    const p: Pending = { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, file, preview: URL.createObjectURL(file), progress: null };
     setPending((list) => [...list, p]);
     return p;
   };
+  const update = (id: string, patch: Partial<Pending>) => setPending((list) => list.map((x) => (x.id === id ? { ...x, ...patch } : x)));
   const done = (p: Pending) => {
     URL.revokeObjectURL(p.preview);
     setPending((list) => list.filter((x) => x.id !== p.id));
   };
-  return { pending, add, done };
+  return { pending, add, update, done };
 }
 
 const tileBtn = "w-7 h-7 rounded-md bg-white/95 text-slate-700 hover:bg-white flex items-center justify-center shadow disabled:opacity-40";
+
+/** Uploading / queued / failed tile with progress, retry and discard. */
+function PendingTile({ p, onRetry, onDiscard }: { p: Pending; onRetry: () => void; onDiscard: () => void }) {
+  const pct = p.progress === null ? 0 : Math.round(p.progress * 100);
+  return (
+    <li
+      className={`relative aspect-square rounded-lg overflow-hidden bg-slate-50 border border-dashed ${p.error ? "border-rose-300" : "border-brand-border"}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={p.preview} alt="" className={`w-full h-full object-contain ${p.error ? "opacity-40 grayscale" : "opacity-60"}`} />
+      {p.error ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-white/60 p-2 text-center">
+          <AlertCircle className="w-5 h-5 text-rose-600" />
+          <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">Failed</span>
+          <div className="flex gap-1.5">
+            <button type="button" onClick={onRetry} className={`${tileBtn} w-auto px-2 gap-1 text-[11px] font-semibold`} title={p.error}>
+              <RotateCcw className="w-3 h-3" /> Retry
+            </button>
+            <button type="button" onClick={onDiscard} className={tileBtn} aria-label="Discard photo" title="Discard">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-white/40">
+          {p.progress === null ? (
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Queued</span>
+          ) : (
+            <>
+              <Loader2 className="w-5 h-5 text-brand animate-spin" />
+              <span className="text-[10px] font-bold text-brand uppercase tracking-wider">{pct}%</span>
+            </>
+          )}
+        </div>
+      )}
+      {!p.error && (
+        <div className="absolute inset-x-0 bottom-0 h-1 bg-slate-200">
+          <div className="h-full bg-brand transition-all duration-200" style={{ width: `${pct}%` }} />
+        </div>
+      )}
+    </li>
+  );
+}
 
 /**
  * Product photography: several photos, the first is the cover; hover a photo to move or remove it.
@@ -96,27 +142,31 @@ export function ProductImageGallery({
   max: number;
 }) {
   const input = useRef<HTMLInputElement>(null);
-  const { pending, add, done } = usePending();
+  const { pending, add, update, done } = usePending();
   // Uploads finish one by one: always append to the newest list, not the one from when the file was picked
   const latest = useRef(images);
   useEffect(() => {
     latest.current = images;
   }, [images]);
   const room = max - images.length - pending.length;
+  const active = pending.filter((p) => !p.error);
+  const failed = pending.length - active.length;
+
+  const start = (p: Pending) => {
+    update(p.id, { error: undefined, progress: null });
+    uploadOne(p.file, "products", (f) => update(p.id, { progress: f }))
+      .then((img) => {
+        latest.current = [...latest.current, img];
+        onChange(latest.current);
+        done(p);
+      })
+      .catch((e: unknown) => update(p.id, { error: e instanceof Error ? e.message : "Upload failed", progress: null }));
+  };
 
   const pick = (list: FileList | null) => {
     const files = pickable(list, room);
     if (input.current) input.current.value = "";
-    for (const file of files) {
-      const p = add(file);
-      void uploadOne(file, "products").then((img) => {
-        if (img) {
-          latest.current = [...latest.current, img];
-          onChange(latest.current);
-        }
-        done(p);
-      });
-    }
+    files.forEach((file) => start(add(file)));
   };
 
   const move = (from: number, to: number) => {
@@ -137,7 +187,8 @@ export function ProductImageGallery({
             <p className="text-xs font-bold text-slate-900 uppercase tracking-wider">Product Photography</p>
             <p className="text-[11px] text-slate-500">
               Optional · pack shots, close-ups, ingredient highlights · first photo is the cover · up to {max}
-              {pending.length > 0 && <span className="text-brand font-semibold"> · uploading {pending.length}…</span>}
+              {active.length > 0 && <span className="text-brand font-semibold"> · uploading {active.length} in the background…</span>}
+              {failed > 0 && <span className="text-rose-600 font-semibold"> · {failed} failed</span>}
             </p>
           </div>
         </div>
@@ -193,14 +244,7 @@ export function ProductImageGallery({
           </li>
         ))}
         {pending.map((p) => (
-          <li key={p.id} className="relative aspect-square rounded-lg overflow-hidden bg-slate-50 border border-dashed border-brand-border">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={p.preview} alt="Uploading" className="w-full h-full object-contain opacity-60" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-white/40">
-              <Loader2 className="w-5 h-5 text-brand animate-spin" />
-              <span className="text-[10px] font-bold text-brand uppercase tracking-wider">Uploading</span>
-            </div>
-          </li>
+          <PendingTile key={p.id} p={p} onRetry={() => start(p)} onDiscard={() => done(p)} />
         ))}
         {room > 0 && (
           <li>
@@ -239,10 +283,10 @@ export function VariantImagePicker({
     if (input.current) input.current.value = "";
     if (!file) return;
     const p = add(file);
-    void uploadOne(file, folder).then((img) => {
-      if (img) onChange(img);
-      done(p);
-    });
+    uploadOne(file, folder)
+      .then((img) => onChange(img))
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : `Upload failed for ${file.name}`))
+      .finally(() => done(p));
   };
 
   return (
