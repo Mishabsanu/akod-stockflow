@@ -3,6 +3,8 @@
 import { Form, Formik } from "formik";
 import { FormErrorNotice } from "@/components/forms/FormErrorNotice";
 import { Package } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useRef } from "react";
 import { FormCard } from "@/components/forms/FormCard";
 import { SelectField, STATUS_OPTIONS, TextAreaField, TextField } from "@/components/forms/FormikFields";
 import { useApiSubmit } from "@/hooks/useApiSubmit";
@@ -11,9 +13,10 @@ import { emptyProduct, emptyVariant, productFormSchema, type ProductInput } from
 import { resourceApi } from "@/services/apiClient";
 import { FLAVOR_SUGGESTIONS, ImagesField, InstagramReelsField, Panel, toInitialValues, ToggleField } from "./ProductFormParts";
 import { PRODUCT_UI } from "./productConfig";
-import { pendingUploads, usePendingUploads } from "./uploadTracker";
+import { finishInBackground, runningUploads } from "./uploadTracker";
+import type { ProductImage } from "@/lib/commerceTypes";
+import { apiRequest } from "@/services/apiClient";
 import { VariantsEditor } from "./VariantsEditor";
-import { toast } from "sonner";
 
 interface ProductFormProps {
   initial?: Product;
@@ -30,6 +33,7 @@ const FLAVOR_LIST_ID = "flavor-profile-suggestions";
 export function ProductForm({ initial, categories, defaultReorderLevel, flavors = [] }: ProductFormProps) {
   const api = resourceApi<Product>(PRODUCT_UI.apiBase);
   const isEdit = Boolean(initial);
+  const router = useRouter();
 
   const initialValues: ProductInput = initial
     ? toInitialValues(initial)
@@ -46,21 +50,25 @@ export function ProductForm({ initial, categories, defaultReorderLevel, flavors 
     .map((c) => ({ label: c, value: c }));
   const stockById = Object.fromEntries((initial?.variants ?? []).map((v) => [v._id, v.stock ?? 0]));
 
-  const uploads = usePendingUploads();
+  // Photos still uploading when Save is pressed: the product saves now with the finished ones,
+  // and the rest are added to it as they finish (even after leaving this page).
+  const stillUploading = useRef<Promise<ProductImage>[]>([]);
   const save = useApiSubmit<ProductInput, Product>({
-    request: (values) => (initial ? api.update(initial._id, values) : api.create(values)),
+    request: (values) => {
+      stillUploading.current = runningUploads<ProductImage>("product-images");
+      return initial ? api.update(initial._id, values) : api.create(values);
+    },
     successMessage: isEdit ? "Product updated" : "Product created",
     redirectTo: (p) => `${PRODUCT_UI.basePath}/${p._id}`,
+    onSuccess: (p) => {
+      void finishInBackground(
+        stillUploading.current,
+        (images) => apiRequest(`/api/products/${p._id}/images`, "POST", { images }).then(() => undefined),
+        { what: "photo(s)", record: p.name, onDone: () => router.refresh() }
+      );
+    },
   });
-  // Photos upload in the background: save only once they are all in
-  const onSubmit: typeof save = async (values, helpers) => {
-    if (pendingUploads() > 0) {
-      toast.info("Photos are still uploading — save again in a moment");
-      helpers.setSubmitting(false);
-      return;
-    }
-    return save(values, helpers);
-  };
+  const onSubmit = save;
 
   return (
     <Formik initialValues={initialValues} validationSchema={productFormSchema} onSubmit={onSubmit}>
@@ -75,7 +83,7 @@ export function ProductForm({ initial, categories, defaultReorderLevel, flavors 
               icon={<Package className="w-4.5 h-4.5" />}
               backHref={initial ? `${PRODUCT_UI.basePath}/${initial._id}` : PRODUCT_UI.basePath}
               submitLabel="Save Product"
-              submitting={isSubmitting || uploads > 0}
+              submitting={isSubmitting}
             >
               <div className="space-y-4">
                 {/* Product details + settings */}

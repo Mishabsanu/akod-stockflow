@@ -9,7 +9,8 @@ import { SelectField, STATUS_OPTIONS, TextAreaField, TextField } from "@/compone
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { VariantImagePicker } from "@/components/products/ProductImages";
-import { pendingUploads, usePendingUploads } from "@/components/products/uploadTracker";
+import { finishInBackground, runningUploads } from "@/components/products/uploadTracker";
+import { apiRequest } from "@/services/apiClient";
 import type { Category, ProductImage } from "@/lib/commerceTypes";
 import { categorySchema, emptyCategory, type CategoryInput } from "@/lib/validation/category.schema";
 import { ApiError, resourceApi } from "@/services/apiClient";
@@ -33,7 +34,6 @@ function CategoryImageField() {
 /** Create / edit a category. `category` = null → closed; "new" → create. */
 export function CategoryFormModal({ category, onClose }: { category: Category | "new" | null; onClose: () => void }) {
   const router = useRouter();
-  const uploads = usePendingUploads();
   if (!category) return null;
   const editing = category !== "new" ? category : null;
   const initial: CategoryInput = editing
@@ -45,14 +45,16 @@ export function CategoryFormModal({ category, onClose }: { category: Category | 
       initialValues={initial}
       validationSchema={categorySchema}
       onSubmit={async (values, helpers) => {
-        if (pendingUploads() > 0) {
-          toast.info("The image is still uploading — save again in a moment");
-          helpers.setSubmitting(false);
-          return;
-        }
+        // An image still uploading is set on the category once it finishes (saving does not wait)
+        const stillUploading = runningUploads<ProductImage>("category-image");
         try {
           const saved = editing ? await api.update(editing._id, values) : await api.create(values);
           toast.success(editing ? "Category updated" : `${saved.name} created`);
+          void finishInBackground(
+            stillUploading.slice(-1),
+            ([image]) => apiRequest(`/api/categories/${saved._id}/image`, "PUT", { image }).then(() => undefined),
+            { what: "image", record: saved.name, onDone: () => router.refresh() }
+          );
           onClose();
           router.refresh();
         } catch (e) {
@@ -80,7 +82,7 @@ export function CategoryFormModal({ category, onClose }: { category: Category | 
               <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button onClick={submitForm} loading={isSubmitting || uploads > 0}>
+              <Button onClick={submitForm} loading={isSubmitting}>
                 {editing ? "Save Changes" : "Create Category"}
               </Button>
             </>

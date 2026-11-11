@@ -4,7 +4,7 @@ import { optionalDay, optionalObjectId, optionalText, requiredText, rupees, stat
 
 export const SKU_PATTERN = /^[A-Za-z0-9\-_/.]+$/;
 export const MAX_VARIANTS = 100;
-export const MAX_PRODUCT_IMAGES = 30;
+export const MAX_PRODUCT_IMAGES = 100;
 
 const skuField = () => requiredText("SKU code", 40).matches(SKU_PATTERN, "SKU may only contain letters, numbers and - _ / .");
 

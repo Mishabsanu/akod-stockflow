@@ -7,7 +7,7 @@ import { uploadDirect } from "@/components/documents/directUpload";
 import { Button } from "@/components/ui/Button";
 import type { ProductImage } from "@/lib/commerceTypes";
 import { IMAGE_ACCEPT } from "@/lib/documents";
-import { trackUpload } from "./uploadTracker";
+import { trackUpload, type UploadScope } from "./uploadTracker";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 /** Photos are shrunk in the browser before upload, so large camera files are fine. */
@@ -54,8 +54,8 @@ const toImage = (d: { url: string; publicId: string; resourceType: string; name:
 });
 
 /** Uploads one file straight to Cloudinary <CLOUDINARY_FOLDER>/<folder>; counted so forms wait for it before saving. */
-function uploadOne(file: File, folder: ImageFolder, onProgress?: (f: number) => void): Promise<ProductImage> {
-  return trackUpload(uploadDirect(file, folder, { onProgress }).then(toImage));
+function uploadOne(file: File, folder: ImageFolder, onProgress?: (f: number) => void, scope?: UploadScope): Promise<ProductImage> {
+  return trackUpload(uploadDirect(file, folder, { onProgress }).then(toImage), scope);
 }
 
 interface Pending {
@@ -154,7 +154,7 @@ export function ProductImageGallery({
 
   const start = (p: Pending) => {
     update(p.id, { error: undefined, progress: null });
-    uploadOne(p.file, "products", (f) => update(p.id, { progress: f }))
+    uploadOne(p.file, "products", (f) => update(p.id, { progress: f }), "product-images")
       .then((img) => {
         latest.current = [...latest.current, img];
         onChange(latest.current);
@@ -186,7 +186,7 @@ export function ProductImageGallery({
           <div>
             <p className="text-xs font-bold text-slate-900 uppercase tracking-wider">Product Photography</p>
             <p className="text-[11px] text-slate-500">
-              Optional · pack shots, close-ups, ingredient highlights · first photo is the cover · up to {max}
+              Optional · pick as many as you like, they upload in the background · first photo is the cover
               {active.length > 0 && <span className="text-brand font-semibold"> · uploading {active.length} in the background…</span>}
               {failed > 0 && <span className="text-rose-600 font-semibold"> · {failed} failed</span>}
             </p>
@@ -283,7 +283,7 @@ export function VariantImagePicker({
     if (input.current) input.current.value = "";
     if (!file) return;
     const p = add(file);
-    uploadOne(file, folder)
+    uploadOne(file, folder, undefined, folder === "categories" ? "category-image" : undefined)
       .then((img) => onChange(img))
       .catch((e: unknown) => toast.error(e instanceof Error ? e.message : `Upload failed for ${file.name}`))
       .finally(() => done(p));
