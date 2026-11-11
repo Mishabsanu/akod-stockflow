@@ -56,6 +56,8 @@ export interface StorefrontProduct {
 export interface StorefrontCatalog {
   categories: StorefrontCategory[];
   products: StorefrontProduct[];
+  /** Counts only: why products in AKOD ECO are not on the store (helps when the store looks empty). */
+  hidden: { inactive: number; notOnStorefront: number; categoryInactive: number; noActiveVariants: number };
   generatedAt: string;
 }
 
@@ -86,12 +88,14 @@ async function unitsSold(): Promise<Map<string, number>> {
 }
 
 export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
-  const [cats, parents] = await Promise.all([
+  const [cats, parents, inactive, notOnStorefront] = await Promise.all([
     Category.find({ status: "active" }).sort({ name: 1 }).lean(),
     Product.find({ parent: null, status: "active", storefrontVisible: { $ne: false } })
       .select("-costPricePaise -createdBy -__v")
       .sort({ name: 1 })
       .lean<LeanProduct[]>(),
+    Product.countDocuments({ parent: null, status: { $ne: "active" } }),
+    Product.countDocuments({ parent: null, status: "active", storefrontVisible: false }),
   ]);
 
   const activeCats = new Map(cats.map((c) => [c.name.toLowerCase(), c]));
@@ -123,6 +127,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
   const soldByProduct = new Map<string, number>();
 
   const products: StorefrontProduct[] = [];
+  let noActiveVariants = 0;
   for (const p of visible) {
     const id = String(p._id);
     const images = (p.images ?? []).map((i) => i.url).filter(Boolean);
@@ -134,7 +139,10 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
 
     if (p.hasVariants) {
       const list = variantsByParent.get(id) ?? [];
-      if (list.length === 0) continue; // nothing to sell
+      if (list.length === 0) {
+        noActiveVariants++; // nothing to sell
+        continue;
+      }
       vs = list.map((v) => ({
         id: String(v._id),
         sku: v.sku,
@@ -198,6 +206,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
       productCount: counts.get(slugify(c.name)) ?? 0,
     })),
     products,
+    hidden: { inactive, notOnStorefront, categoryInactive: parents.length - visible.length, noActiveVariants },
     generatedAt: new Date().toISOString(),
   };
 }
