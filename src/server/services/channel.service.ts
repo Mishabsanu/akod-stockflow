@@ -1,4 +1,5 @@
 import "server-only";
+import { activeCategoryFilter } from "./categoryStatus";
 import { newDeleteBatch, softDelete } from "../models/softDelete";
 import { assertAllocatable, channelSold, remainingOf, sellableOnChannel } from "./channelAllocation";
 import { isValidObjectId, Types } from "mongoose";
@@ -216,7 +217,12 @@ export interface AssignableProduct {
 /** Assign Products modal: active products (searchable, paginated) with whether each is already on the channel. */
 export async function listAssignableProducts(channelId: string, query: ListQuery): Promise<Paginated<AssignableProduct>> {
   if (!isValidObjectId(channelId)) throw notFound("Channel");
-  const filter: Filter = { status: "active", hasVariants: { $ne: true }, ...searchFilter(query.search, ["sku", "name", "barcode", "category"]) };
+  const filter: Filter = {
+    status: "active",
+    hasVariants: { $ne: true },
+    ...(await activeCategoryFilter()),
+    ...searchFilter(query.search, ["sku", "name", "barcode", "category"]),
+  };
   if (query.filters.category) filter.category = query.filters.category;
   if (query.filters.hideAssigned === "1") {
     const assigned = await ChannelProductModel.find({ channel: channelId }).distinct("product");

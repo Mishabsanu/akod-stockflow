@@ -5,6 +5,9 @@ import { Category } from "../models/Category";
 import { Inventory } from "../models/Inventory";
 import { Order } from "../models/Order";
 import { Product, type ProductDoc } from "../models/Product";
+import { applyOffer, offerLabel } from "@/lib/validation/offer.schema";
+import type { OfferDoc } from "../models/Offer";
+import { liveOffers } from "./offer.service";
 
 /**
  * Public, read-only catalog for the online store (akod-food).
@@ -30,6 +33,20 @@ export interface StorefrontVariant {
   inStock: boolean;
 }
 
+/** A live offer, as the store shows it. */
+export interface StorefrontOffer {
+  id: string;
+  name: string;
+  /** "15% OFF" / "₹50 OFF" */
+  label: string;
+  description: string;
+  /** Last day (YYYY-MM-DD) or "" when open-ended */
+  endDate: string;
+  appliesTo: "all" | "categories" | "products";
+  /** Category slugs it covers (appliesTo = categories) */
+  categories: string[];
+}
+
 export interface StorefrontProduct {
   id: string;
   slug: string;
@@ -51,11 +68,15 @@ export interface StorefrontProduct {
   inStock: boolean;
   bestSeller: boolean;
   variants: StorefrontVariant[];
+  /** Offer applied to this product's prices (prices above are already discounted) */
+  offer?: { id: string; name: string; label: string };
 }
 
 export interface StorefrontCatalog {
   categories: StorefrontCategory[];
   products: StorefrontProduct[];
+  /** Offers running today (India time) */
+  offers: StorefrontOffer[];
   /** Counts only: why products in AKOD ECO are not on the store (helps when the store looks empty). */
   hidden: { inactive: number; notOnStorefront: number; categoryInactive: number; noActiveVariants: number };
   generatedAt: string;
@@ -88,7 +109,7 @@ async function unitsSold(): Promise<Map<string, number>> {
 }
 
 export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
-  const [cats, parents, inactive, notOnStorefront] = await Promise.all([
+  const [cats, parents, inactive, notOnStorefront, offers] = await Promise.all([
     Category.find({ status: "active" }).sort({ name: 1 }).lean(),
     Product.find({ parent: null, status: "active", storefrontVisible: { $ne: false } })
       .select("-costPricePaise -createdBy -__v")
@@ -96,7 +117,20 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
       .lean<LeanProduct[]>(),
     Product.countDocuments({ parent: null, status: { $ne: "active" } }),
     Product.countDocuments({ parent: null, status: "active", storefrontVisible: false }),
+    liveOffers(),
   ]);
+
+  /** Live offers that cover a product (all / its category / the product itself). */
+  const offersFor = (p: LeanProduct) =>
+    offers.filter(
+      (o) =>
+        o.appliesTo === "all" ||
+        (o.appliesTo === "categories" && o.categories.some((c) => c.toLowerCase() === (p.category ?? "").toLowerCase())) ||
+        (o.appliesTo === "products" && o.products.some((id) => String(id) === String(p._id)))
+    );
+  /** When several offers cover a product, the customer gets the biggest discount. */
+  const bestOffer = (list: OfferDoc[], price: number) =>
+    list.reduce<OfferDoc | null>((best, o) => (!best || applyOffer(price, o) < applyOffer(price, best) ? o : best), null);
 
   const activeCats = new Map(cats.map((c) => [c.name.toLowerCase(), c]));
   const visible = parents.filter((p) => !p.category || activeCats.has(p.category.toLowerCase()));
@@ -136,6 +170,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
     let mrp = fromPaise(p.mrpPaise);
     let inStock = (stock.get(id) ?? 0) > 0;
     let units = sold.get(id) ?? 0;
+    const matching = offersFor(p);
 
     if (p.hasVariants) {
       const list = variantsByParent.get(id) ?? [];
@@ -157,6 +192,20 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
       mrp = first.mrp;
       inStock = vs.some((v) => v.inStock);
       units = list.reduce((s, v) => s + (sold.get(String(v._id)) ?? 0), 0);
+    }
+
+    // Offer: one offer per product (the best for its default pack), applied to every size
+    const offer = matching.length ? bestOffer(matching, price) : null;
+    if (offer) {
+      if (vs.length) {
+        vs = vs.map((v) => ({ ...v, mrp: Math.max(v.mrp, v.price), price: applyOffer(v.price, offer) }));
+        const first = vs.find((v) => v.inStock) ?? vs[0];
+        price = first.price;
+        mrp = first.mrp;
+      } else {
+        mrp = Math.max(mrp, price);
+        price = applyOffer(price, offer);
+      }
     }
 
     let slug = slugify(p.name);
@@ -186,6 +235,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
       inStock,
       bestSeller: false,
       variants: vs,
+      ...(offer && { offer: { id: String(offer._id), name: offer.name, label: offerLabel(offer) } }),
     });
   }
 
@@ -211,6 +261,16 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
       productCount: counts.get(slugify(c.name)) ?? 0,
     })),
     products,
+    // Only offers that actually discount something on the store (not ones whose products are hidden)
+    offers: offers.filter((o) => products.some((p) => p.offer?.id === String(o._id))).map((o) => ({
+      id: String(o._id),
+      name: o.name,
+      label: offerLabel(o),
+      description: o.description ?? "",
+      endDate: o.endDate ?? "",
+      appliesTo: o.appliesTo,
+      categories: o.categories.map((c) => slugify(c)),
+    })),
     hidden: { inactive, notOnStorefront, categoryInactive: parents.length - visible.length, noActiveVariants },
     generatedAt: new Date().toISOString(),
   };

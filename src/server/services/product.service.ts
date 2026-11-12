@@ -12,6 +12,7 @@ import { toPlain } from "../utils/serialize";
 import { canonicalCategory, listCategoryNames } from "./category.service";
 import { applyVariantSync, hasHistory, normalizeVariants, planVariantSync, refreshVariants, syncVariantStock } from "./productVariant.service";
 import { stockFor } from "./stock.service";
+import { activeCategoryFilter } from "./categoryStatus";
 import { destroyRemoved } from "./upload.service";
 import { newDeleteBatch, softDelete } from "../models/softDelete";
 
@@ -221,7 +222,7 @@ export async function deleteProduct(id: string, userId?: string): Promise<void> 
  * `inStock` keeps only products with stock available.
  */
 export async function listSellableProducts({ inStock = false, search = "" } = {}): Promise<SellableProduct[]> {
-  const filter: Filter = { status: "active", ...SELLABLE_FILTER, ...searchFilter(search, ["sku", "name", "barcode"]) };
+  const filter: Filter = { status: "active", ...SELLABLE_FILTER, ...(await activeCategoryFilter()), ...searchFilter(search, ["sku", "name", "barcode"]) };
   const docs = await ProductModel.find(filter).sort({ name: 1 }).select("sku name sellingPricePaise").limit(5000).lean();
   const stock = await stockFor(docs.map((d) => d._id));
   return docs

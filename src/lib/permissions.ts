@@ -12,6 +12,7 @@ export const PERMISSION_GROUPS = [
     modules: [
       { key: "product", label: "Products — create, edit, variants, images, CSV import / export" },
       { key: "category", label: "Categories — product categories" },
+      { key: "offer", label: "Offers — discounts shown on the online store" },
       { key: "stock", label: "Inventory — stock update, CSV upload, adjustments, history" },
       { key: "material_request", label: "Material Requests — raise (create), approve / reject / receive into stock (update)" },
       { key: "channel", label: "Channels — marketplaces and their assigned products" },

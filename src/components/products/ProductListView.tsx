@@ -102,6 +102,19 @@ export function ProductListView({ data, categories, flavors }: { data: Paginated
             </span>
           ),
       },
+      {
+        key: "displayOrder",
+        label: "Store Order",
+        align: "center",
+        render: (r, { sub }) =>
+          sub ? (
+            "—"
+          ) : (r.displayOrder ?? 0) > 0 ? (
+            <span className="inline-flex min-w-8 justify-center rounded-md bg-slate-900 px-2 py-0.5 font-mono text-[11px] font-bold text-white">#{r.displayOrder}</span>
+          ) : (
+            <span className="text-slate-400">—</span>
+          ),
+      },
       { key: "category", label: "Category", render: (r, { sub }) => (sub ? "—" : <span className="uppercase">{r.category || "—"}</span>) },
       { key: "flavorProfile", label: "Flavor Profile", render: (r, { sub }) => (sub ? "—" : r.flavorProfile || "—") },
       {

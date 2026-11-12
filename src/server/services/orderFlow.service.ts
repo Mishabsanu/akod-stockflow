@@ -6,6 +6,7 @@ import type { IncomeCategory } from "@/lib/financeTypes";
 import { todayIST } from "@/lib/indiaDate";
 import type { SessionUser } from "@/lib/types";
 import { Channel } from "../models/Channel";
+import { activeCategoryFilter } from "./categoryStatus";
 import { ChannelProduct } from "../models/ChannelProduct";
 import { nextCode } from "../models/Counter";
 import { FinanceTransaction } from "../models/FinanceTransaction";
@@ -56,8 +57,10 @@ async function claim(order: OrderDoc, to: OrderStatus, user: SessionUser, note: 
 async function checkSellable(order: OrderDoc): Promise<void> {
   if (!order.items.length) throw new AppError("Add at least one product before confirming", 422);
   const ids = order.items.map((i) => i.product);
-  const active = await Product.countDocuments({ _id: { $in: ids }, status: "active" });
-  if (active !== new Set(ids.map(String)).size) throw new AppError("This order has an inactive product. Remove it or activate the product.", 409);
+  const active = await Product.countDocuments({ _id: { $in: ids }, status: "active", ...(await activeCategoryFilter()) });
+  if (active !== new Set(ids.map(String)).size) {
+    throw new AppError("This order has an inactive product or a product in an inactive category. Remove it or activate it.", 409);
+  }
   if (order.orderType === "MARKETPLACE") {
     const channel = order.channel ? await Channel.findById(order.channel).select("status name").lean() : null;
     if (!channel) throw new AppError("Select the marketplace for this order", 422);

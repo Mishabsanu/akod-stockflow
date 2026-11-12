@@ -59,6 +59,28 @@ export interface Product {
 
 export type ProductImage = Pick<AttachedDocument, "url" | "publicId" | "resourceType" | "name" | "size">;
 
+/** Storefront discount (Products → Offers). */
+export interface Offer {
+  _id: string;
+  name: string;
+  description?: string;
+  discountType: "percent" | "flat";
+  value: number;
+  appliesTo: "all" | "categories" | "products";
+  categories: string[];
+  /** Product ids */
+  products: string[];
+  /** Names of `products`, for the list */
+  productNames?: string[];
+  startDate?: string;
+  endDate?: string;
+  status: RecordStatus;
+  /** live / scheduled / expired / inactive, worked out for today (India) */
+  state?: "live" | "scheduled" | "expired" | "inactive";
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Category {
   _id: string;
   name: string;

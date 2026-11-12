@@ -34,6 +34,7 @@ export const NAV_MODULES: NavModule[] = [
     items: [
       { label: "Products", href: "/dashboard/products", permission: "product" },
       { label: "Categories", href: "/dashboard/products/categories", permission: "category" },
+      { label: "Offers", href: "/dashboard/products/offers", permission: "offer" },
     ],
   },
   {
