@@ -84,6 +84,13 @@ export const productSchema = Yup.object({
   }),
   /** Shown on the storefront */
   storefrontVisible: Yup.boolean().default(true),
+  /** Storefront position: 1 shows first; 0 / empty = after the numbered products */
+  displayOrder: Yup.number()
+    .transform((v, orig) => (orig === "" || orig === null || Number.isNaN(v) ? 0 : v))
+    .integer("Use a whole number")
+    .min(0, "Use 1 or more (leave empty for no order)")
+    .max(9999, "Use a number up to 9999")
+    .default(0),
   /** Instagram reel / post links. Left out (CSV import) = keep the saved ones. */
   instagramReels: Yup.array(
     Yup.string()
@@ -161,6 +168,7 @@ export const emptyProduct: ProductInput = {
   mfgDate: "",
   expiryDate: "",
   storefrontVisible: true,
+  displayOrder: 0,
   instagramReels: [],
   freeDelivery: false,
   images: [],

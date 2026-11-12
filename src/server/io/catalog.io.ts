@@ -33,6 +33,7 @@ function toInput(p: Product): ProductInput {
     mfgDate: p.mfgDate || "",
     expiryDate: p.expiryDate || "",
     storefrontVisible: p.storefrontVisible ?? true,
+    displayOrder: p.displayOrder ?? 0,
   };
 }
 

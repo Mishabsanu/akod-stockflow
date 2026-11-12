@@ -160,6 +160,16 @@ export function ProductForm({ initial, categories, defaultReorderLevel, flavors 
                         <ToggleField name="storefrontVisible" label="Visible on Storefront" hint="Show in the online store" />
                         <ToggleField name="freeDelivery" label="Free Delivery" hint="For all its variants" />
                       </div>
+                      <TextField
+                        name="displayOrder"
+                        label="Display Order"
+                        type="number"
+                        min={0}
+                        step={1}
+                        inputMode="numeric"
+                        placeholder="e.g. 1"
+                        hint="1 shows first on the store; empty = after numbered products"
+                      />
                     </Panel>
                   </div>
                 </div>

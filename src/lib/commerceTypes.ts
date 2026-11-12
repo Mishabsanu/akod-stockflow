@@ -43,6 +43,8 @@ export interface Product {
   mfgDate?: string;
   expiryDate?: string;
   storefrontVisible?: boolean;
+  /** Storefront position (1 = first; 0 = not set) */
+  displayOrder?: number;
   instagramReels?: string[];
   /** Variant packet weight / size and unit */
   size?: string;

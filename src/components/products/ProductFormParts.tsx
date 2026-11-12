@@ -116,6 +116,7 @@ export function toInitialValues(initial: Product): ProductInput {
     mfgDate: initial.mfgDate || "",
     expiryDate: initial.expiryDate || "",
     storefrontVisible: initial.storefrontVisible ?? true,
+    displayOrder: initial.displayOrder ?? 0,
     instagramReels: initial.instagramReels ?? [],
     freeDelivery: Boolean(initial.freeDelivery),
     images: initial.images ?? [],

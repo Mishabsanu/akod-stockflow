@@ -194,6 +194,11 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
   const top = ranked.filter((p) => (soldByProduct.get(p.id) ?? 0) > 0).slice(0, BEST_SELLER_COUNT);
   for (const p of top.length ? top : ranked.slice(0, BEST_SELLER_COUNT)) p.bestSeller = true;
 
+  // Store order: Display Order 1, 2, 3… first, then products without one by name
+  const orderOf = new Map(visible.map((p) => [String(p._id), p.displayOrder ?? 0]));
+  const rank = (id: string) => orderOf.get(id) || Number.MAX_SAFE_INTEGER;
+  products.sort((a, b) => rank(a.id) - rank(b.id) || a.name.localeCompare(b.name));
+
   const counts = new Map<string, number>();
   for (const p of products) counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
 
