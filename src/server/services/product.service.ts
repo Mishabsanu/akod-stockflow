@@ -13,6 +13,7 @@ import { canonicalCategory, listCategoryNames } from "./category.service";
 import { applyVariantSync, hasHistory, normalizeVariants, planVariantSync, refreshVariants, syncVariantStock } from "./productVariant.service";
 import { stockFor } from "./stock.service";
 import { activeCategoryFilter } from "./categoryStatus";
+import { bestOffer, liveOffers, offerSummary, offersCovering } from "./offer.service";
 import { destroyRemoved } from "./upload.service";
 import { newDeleteBatch, softDelete } from "../models/softDelete";
 
@@ -122,7 +123,16 @@ export async function listProducts(query: ListQuery): Promise<Paginated<Product>
       .lean<ProductDoc[]>(),
     ProductModel.countDocuments(filter),
   ]);
-  return paginate(await withVariants(items), total, query);
+  const [rows, offers] = await Promise.all([withVariants(items), liveOffers()]);
+  // Show which live store offer covers each product (best one for its lowest price)
+  const withOffers = rows.map((r) => {
+    const covering = offers.length ? offersCovering(offers, r) : [];
+    if (!covering.length) return r;
+    const prices = r.variants?.length ? r.variants.map((v) => v.sellingPrice) : [r.sellingPrice];
+    const best = bestOffer(covering, Math.min(...prices));
+    return best ? { ...r, liveOffer: offerSummary(best) } : r;
+  });
+  return paginate(withOffers, total, query);
 }
 
 export async function getProduct(id: string): Promise<Product> {

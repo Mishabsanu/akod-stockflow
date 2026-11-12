@@ -11,6 +11,8 @@ import { STATUS_FILTER, type Column, type FilterConfig } from "@/components/tabl
 import { StatusBadge } from "@/components/ui/Badge";
 import type { StockLevel } from "@/lib/commerceTypes";
 import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatDay } from "@/lib/indiaDate";
+import { applyOffer } from "@/lib/validation/offer.schema";
 import type { Paginated, Product } from "@/lib/types";
 import { ProductThumb } from "./ProductImages";
 import { PRODUCT_UI } from "./productConfig";
@@ -136,7 +138,33 @@ export function ProductListView({ data, categories, flavors }: { data: Paginated
         key: "sellingPrice",
         label: "Price",
         align: "right",
-        render: (r) => <span className="font-bold text-slate-900">{r.variants?.length ? range(r.variants.map((v) => v.sellingPrice)) : rupees(r.sellingPrice)}</span>,
+        render: (r) => {
+          const prices = r.variants?.length ? r.variants.map((v) => v.sellingPrice) : [r.sellingPrice];
+          const o = r.liveOffer;
+          if (!o) return <span className="font-bold text-slate-900">{range(prices)}</span>;
+          return (
+            <span className="inline-flex flex-col items-end leading-tight">
+              <span className="font-bold text-emerald-700">{range(prices.map((p) => applyOffer(p, o)))}</span>
+              <span className="text-[11px] text-slate-400 line-through">{range(prices)}</span>
+            </span>
+          );
+        },
+      },
+      {
+        key: "liveOffer",
+        label: "Offer",
+        render: (r, { sub }) =>
+          sub ? (
+            "—"
+          ) : r.liveOffer ? (
+            <span className="inline-flex max-w-[220px] flex-col" title={r.liveOffer.name}>
+              <span className="inline-flex w-fit items-center rounded bg-emerald-600 px-1.5 py-0.5 text-[10.5px] font-bold text-white">{r.liveOffer.label}</span>
+              <span className="truncate text-[11px] text-slate-600">{r.liveOffer.name}</span>
+              {r.liveOffer.endDate && <span className="text-[10.5px] text-slate-400">until {formatDay(r.liveOffer.endDate)}</span>}
+            </span>
+          ) : (
+            <span className="text-slate-400">—</span>
+          ),
       },
       {
         key: "mrp",

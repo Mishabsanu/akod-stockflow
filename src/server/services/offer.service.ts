@@ -3,7 +3,7 @@ import { isValidObjectId, Types } from "mongoose";
 import { todayIST } from "@/lib/indiaDate";
 import type { Offer } from "@/lib/commerceTypes";
 import type { Paginated } from "@/lib/types";
-import { offerState, type OfferInput } from "@/lib/validation/offer.schema";
+import { applyOffer, offerLabel, offerState, type OfferInput } from "@/lib/validation/offer.schema";
 import { notFound } from "../http/errors";
 import { paginate, searchFilter, statusFilter, type ListQuery } from "../http/query";
 import { Offer as OfferModel, type OfferDoc } from "../models/Offer";
@@ -96,3 +96,29 @@ export async function liveOffers(): Promise<LeanOffer[]> {
   const docs = await OfferModel.find({ status: "active" }).lean<LeanOffer[]>();
   return docs.filter((o) => offerState(o, today) === "live");
 }
+
+/** Live offers covering a product: store-wide, its category, or the product itself. */
+export function offersCovering(offers: LeanOffer[], p: { _id: unknown; category?: string }) {
+  const cat = (p.category ?? "").toLowerCase();
+  return offers.filter(
+    (o) =>
+      o.appliesTo === "all" ||
+      (o.appliesTo === "categories" && o.categories.some((c) => c.toLowerCase() === cat)) ||
+      (o.appliesTo === "products" && o.products.some((id) => String(id) === String(p._id)))
+  );
+}
+
+/** The offer the customer gets (biggest discount on `price`), or null. */
+export function bestOffer(offers: LeanOffer[], price: number): LeanOffer | null {
+  return offers.reduce<LeanOffer | null>((best, o) => (!best || applyOffer(price, o) < applyOffer(price, best) ? o : best), null);
+}
+
+/** Offer summary for the admin product list. */
+export const offerSummary = (o: LeanOffer) => ({
+  id: String(o._id),
+  name: o.name,
+  label: offerLabel(o),
+  discountType: o.discountType,
+  value: o.value,
+  endDate: o.endDate ?? "",
+});

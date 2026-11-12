@@ -45,6 +45,8 @@ export interface Product {
   storefrontVisible?: boolean;
   /** Storefront position (1 = first; 0 = not set) */
   displayOrder?: number;
+  /** Live offer on the online store right now (product list) */
+  liveOffer?: { id: string; name: string; label: string; discountType: "percent" | "flat"; value: number; endDate: string } | null;
   instagramReels?: string[];
   /** Variant packet weight / size and unit */
   size?: string;
