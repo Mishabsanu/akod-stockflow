@@ -70,6 +70,8 @@ export interface StorefrontProduct {
   variants: StorefrontVariant[];
   /** Display Order set in AKOD ECO (1 = first; 0 = not set) */
   displayOrder: number;
+  /** Ticked "Show in Home Banner" in AKOD ECO */
+  inBanner: boolean;
   /** Offer applied to this product's prices (prices above are already discounted) */
   offer?: { id: string; name: string; label: string };
 }
@@ -237,6 +239,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
       inStock,
       bestSeller: false,
       displayOrder: p.displayOrder ?? 0,
+      inBanner: Boolean(p.showInBanner),
       variants: vs,
       ...(offer && { offer: { id: String(offer._id), name: offer.name, label: offerLabel(offer) } }),
     });

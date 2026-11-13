@@ -46,6 +46,8 @@ export interface ProductDoc {
   storefrontVisible?: boolean;
   /** Storefront position: 1 shows first, 2 next…; 0 = not set (after the numbered ones) */
   displayOrder?: number;
+  /** Shown in the online store's home banner (hero) */
+  showInBanner?: boolean;
   instagramReels?: string[];
   /** Variant packet weight / size and unit, e.g. "250" + "g" (variantName = "250 g") */
   size?: string;
@@ -92,6 +94,7 @@ const ProductSchema = new Schema<ProductDoc>(
     expiryDate: { type: String, default: "" },
     storefrontVisible: { type: Boolean, default: true },
     displayOrder: { type: Number, default: 0, min: 0 },
+    showInBanner: { type: Boolean, default: false },
     instagramReels: { type: [String], default: [] },
     size: { type: String, trim: true, default: "" },
     unit: { type: String, trim: true, default: "" },

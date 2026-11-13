@@ -34,6 +34,7 @@ function toInput(p: Product): ProductInput {
     expiryDate: p.expiryDate || "",
     storefrontVisible: p.storefrontVisible ?? true,
     displayOrder: p.displayOrder ?? 0,
+    showInBanner: p.showInBanner ?? false,
   };
 }
 

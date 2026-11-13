@@ -84,6 +84,8 @@ export const productSchema = Yup.object({
   }),
   /** Shown on the storefront */
   storefrontVisible: Yup.boolean().default(true),
+  /** In the store's home banner (hero); when no product is ticked, the banner shows all */
+  showInBanner: Yup.boolean().default(false),
   /** Storefront position: 1 shows first; 0 / empty = after the numbered products */
   displayOrder: Yup.number()
     .transform((v, orig) => (orig === "" || orig === null || Number.isNaN(v) ? 0 : v))
@@ -169,6 +171,7 @@ export const emptyProduct: ProductInput = {
   expiryDate: "",
   storefrontVisible: true,
   displayOrder: 0,
+  showInBanner: false,
   instagramReels: [],
   freeDelivery: false,
   images: [],

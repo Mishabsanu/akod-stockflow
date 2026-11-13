@@ -26,7 +26,7 @@ export function Panel({ title, description, children }: { title: string; descrip
 }
 
 /** Checkbox card, e.g. Free Delivery, Visible on Storefront. */
-export function ToggleField({ name, label, hint }: { name: "freeDelivery" | "storefrontVisible"; label: string; hint: string }) {
+export function ToggleField({ name, label, hint }: { name: "freeDelivery" | "storefrontVisible" | "showInBanner"; label: string; hint: string }) {
   const [field, , helpers] = useField<boolean>(name);
   return (
     <label className="flex items-start gap-2.5 p-2.5 rounded-lg border border-line bg-slate-50/60 cursor-pointer">
@@ -117,6 +117,7 @@ export function toInitialValues(initial: Product): ProductInput {
     expiryDate: initial.expiryDate || "",
     storefrontVisible: initial.storefrontVisible ?? true,
     displayOrder: initial.displayOrder ?? 0,
+    showInBanner: Boolean(initial.showInBanner),
     instagramReels: initial.instagramReels ?? [],
     freeDelivery: Boolean(initial.freeDelivery),
     images: initial.images ?? [],

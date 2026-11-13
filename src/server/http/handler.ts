@@ -1,11 +1,12 @@
 import "server-only";
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import type { AnyObject, ObjectSchema } from "yup";
 import { can, type PermissionAction, type PermissionModule } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/types";
 import { connectDB } from "../db";
 import { invalidateSessionCache, loadSessionUser } from "../auth/session";
 import { SESSION_COOKIE } from "../auth/token";
+import { affectsStorefront, notifyStorefront } from "../storefront/notify";
 import { AppError, errorResponse } from "./errors";
 
 type Guard = { module: PermissionModule; action: PermissionAction } | "authenticated";
@@ -59,6 +60,11 @@ export function apiHandler<P = Record<string, never>>(
       // A user or role was changed: drop cached sessions so new permissions apply on the next click
       if (req.method !== "GET" && guard !== "authenticated" && (guard.module === "user" || guard.module === "role")) {
         invalidateSessionCache();
+      }
+      // Product / offer / category / stock changed: refresh the online store once this response is sent
+      if (affectsStorefront(req.method, req.nextUrl.pathname)) {
+        const reason = `${req.method} ${req.nextUrl.pathname}`;
+        after(() => notifyStorefront(reason));
       }
       return result instanceof NextResponse ? result : NextResponse.json(result ?? { success: true });
     } catch (error) {

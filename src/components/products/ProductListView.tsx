@@ -91,6 +91,11 @@ export function ProductListView({ data, categories, flavors }: { data: Paginated
                   <Truck className="w-3 h-3" />
                 </span>
               )}
+              {r.showInBanner && (
+                <span title="In the store's home banner" className="inline-flex items-center text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 shrink-0 text-[10px] font-bold">
+                  BANNER
+                </span>
+              )}
               {(r.displayOrder ?? 0) > 0 && (
                 <span title="Display order on the store" className="inline-flex items-center text-slate-700 bg-slate-100 border border-slate-200 rounded px-1 py-0.5 shrink-0 font-mono text-[10px]">
                   #{r.displayOrder}

@@ -159,6 +159,7 @@ export function ProductForm({ initial, categories, defaultReorderLevel, flavors 
                       <div className="grid grid-cols-2 gap-2.5">
                         <ToggleField name="storefrontVisible" label="Visible on Storefront" hint="Show in the online store" />
                         <ToggleField name="freeDelivery" label="Free Delivery" hint="For all its variants" />
+                        <ToggleField name="showInBanner" label="Show in Home Banner" hint="Featured in the store's top banner" />
                       </div>
                       <TextField
                         name="displayOrder"

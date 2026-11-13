@@ -25,7 +25,8 @@ export async function GET(req: NextRequest) {
     await connectDB();
     const catalog = await getStorefrontCatalog();
     return NextResponse.json(catalog, {
-      headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=120" },
+      // No CDN/browser caching: the store keeps its own cache and is refreshed instantly on every change
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
     return errorResponse(error);
