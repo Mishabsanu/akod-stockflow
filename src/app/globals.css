@@ -90,3 +90,13 @@
     font-size: 16px !important;
   }
 }
+
+/* "Print A6" on an order: print only the A6 slip (see PrintButton / OrderSlipA6) */
+@media print {
+  html[data-print="a6"] .print-a4 {
+    display: none !important;
+  }
+  html[data-print="a6"] .print-a6 {
+    display: block !important;
+  }
+}

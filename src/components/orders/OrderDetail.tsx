@@ -9,6 +9,7 @@ import type { Option } from "@/lib/types";
 import type { CompanySettings } from "@/lib/validation/setting.schema";
 import { OrderActions } from "./OrderActions";
 import { OrderStatusBadge, OrderTypeBadge, PaymentStatusBadge } from "./OrderBadges";
+import { OrderSlipA6 } from "./OrderSlipA6";
 import { ORDER_STATUS_LABELS, ORDER_UI } from "./orderConfig";
 import { OrderPayments } from "./OrderPayments";
 import { PrintButton } from "./PrintButton";
@@ -114,7 +115,9 @@ export function OrderDetail({ order, payments, accounts, canUpdate, canPay, comp
   const partyTitle = order.orderType === "DISTRIBUTOR" ? "Distributor" : order.orderType === "MARKETPLACE" ? "Buyer" : "Customer";
 
   return (
-    <div className="space-y-4">
+    <>
+      <OrderSlipA6 order={order} company={company} />
+      <div className="print-a4 space-y-4">
       {company && (
         <div className="hidden print:block border-b border-slate-300 pb-3 mb-2">
           <p className="text-lg font-bold text-slate-900">{company.companyName}</p>
@@ -307,7 +310,8 @@ export function OrderDetail({ order, payments, accounts, canUpdate, canPay, comp
           ))}
         </ol>
       </section>
-    </div>
+      </div>
+    </>
   );
 }
 
