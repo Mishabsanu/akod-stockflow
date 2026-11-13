@@ -212,6 +212,8 @@ export interface AssignableProduct {
   sellingPrice: number;
   stock: number;
   assigned: boolean;
+  /** Photo URL (a variant without its own photo uses its product's cover) */
+  image?: string;
 }
 
 /** Assign Products modal: active products (searchable, paginated) with whether each is already on the channel. */
@@ -256,6 +258,35 @@ export async function listAssignableProducts(channelId: string, query: ListQuery
     total,
     query
   );
+}
+
+/** Assign Products page: every active sellable product (no paging) with whether it is already on the channel. */
+export async function listAllAssignable(channelId: string): Promise<AssignableProduct[]> {
+  if (!isValidObjectId(channelId)) throw notFound("Channel");
+  const items = await Product.find({ status: "active", hasVariants: { $ne: true }, ...(await activeCategoryFilter()) })
+    .sort({ name: 1 })
+    .select("sku name category sellingPricePaise images parent")
+    .limit(5000)
+    .lean();
+  const ids = items.map((p) => p._id);
+  const parentIds = [...new Set(items.filter((p) => p.parent && !p.images?.length).map((p) => String(p.parent)))];
+  const [stock, onChannel, parents] = await Promise.all([
+    stockFor(ids),
+    ChannelProductModel.find({ channel: channelId }).distinct("product"),
+    parentIds.length ? Product.find({ _id: { $in: parentIds } }).select("images").lean() : Promise.resolve([]),
+  ]);
+  const cover = new Map(parents.map((p) => [String(p._id), p.images?.[0]?.url]));
+  const assignedSet = new Set(onChannel.map(String));
+  return items.map((p) => ({
+    _id: String(p._id),
+    sku: p.sku,
+    name: p.name,
+    category: p.category,
+    sellingPrice: fromPaise(p.sellingPricePaise),
+    stock: stock.get(String(p._id)) ?? 0,
+    assigned: assignedSet.has(String(p._id)),
+    image: p.images?.[0]?.url ?? (p.parent ? cover.get(String(p.parent)) : undefined),
+  }));
 }
 
 /** Adds products to the channel; ones already assigned (or missing / inactive) are skipped. */

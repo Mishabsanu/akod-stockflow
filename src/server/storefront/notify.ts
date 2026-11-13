@@ -26,7 +26,7 @@ export async function notifyStorefront(reason: string): Promise<void> {
 }
 
 /** API paths whose writes change what the store shows (products, prices, offers, categories, stock). */
-const STORE_PATHS = ["/api/products", "/api/categories", "/api/offers", "/api/stock", "/api/inventory", "/api/orders", "/api/recycle-bin", "/api/io"];
+const STORE_PATHS = ["/api/products", "/api/categories", "/api/offers", "/api/channels", "/api/stock", "/api/inventory", "/api/orders", "/api/recycle-bin", "/api/io"];
 
 export const affectsStorefront = (method: string, pathname: string) =>
   method !== "GET" && method !== "HEAD" && STORE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

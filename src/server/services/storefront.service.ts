@@ -8,6 +8,7 @@ import { Product, type ProductDoc } from "../models/Product";
 import { applyOffer, offerLabel } from "@/lib/validation/offer.schema";
 import type { OfferDoc } from "../models/Offer";
 import { liveOffers } from "./offer.service";
+import { storeChannelListing } from "../storefront/channel";
 
 /**
  * Public, read-only catalog for the online store (akod-food).
@@ -113,7 +114,7 @@ async function unitsSold(): Promise<Map<string, number>> {
 }
 
 export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
-  const [cats, parents, inactive, notOnStorefront, offers] = await Promise.all([
+  const [cats, parents, inactive, notOnStorefront, offers, listing] = await Promise.all([
     Category.find({ status: "active" }).sort({ name: 1 }).lean(),
     Product.find({ parent: null, status: "active", storefrontVisible: { $ne: false } })
       .select("-costPricePaise -createdBy -__v")
@@ -122,7 +123,14 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
     Product.countDocuments({ parent: null, status: { $ne: "active" } }),
     Product.countDocuments({ parent: null, status: "active", storefrontVisible: false }),
     liveOffers(),
+    storeChannelListing(),
   ]);
+  // Only products assigned to the AKOD IN marketplace are sold here, at its channel price when one is set
+  const onChannel = (id: unknown) => !listing || listing.has(String(id));
+  const channelPriced = (p: LeanProduct): LeanProduct => {
+    const cp = listing?.get(String(p._id));
+    return cp ? { ...p, sellingPricePaise: cp } : p;
+  };
 
   /** Live offers that cover a product (all / its category / the product itself). */
   const offersFor = (p: LeanProduct) =>
@@ -137,15 +145,22 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
     list.reduce<OfferDoc | null>((best, o) => (!best || applyOffer(price, o) < applyOffer(price, best) ? o : best), null);
 
   const activeCats = new Map(cats.map((c) => [c.name.toLowerCase(), c]));
-  const visible = parents.filter((p) => !p.category || activeCats.has(p.category.toLowerCase()));
+  const visible = parents
+    .filter((p) => !p.category || activeCats.has(p.category.toLowerCase()))
+    .filter((p) => p.hasVariants || onChannel(p._id))
+    .map(channelPriced);
 
   const variantParents = visible.filter((p) => p.hasVariants).map((p) => p._id);
-  const variants = variantParents.length
+  const variantsAll = variantParents.length
     ? await Product.find({ parent: { $in: variantParents }, status: "active" })
         .select("-costPricePaise -createdBy -__v")
         .sort({ sellingPricePaise: 1 })
         .lean<LeanProduct[]>()
     : [];
+  const variants = variantsAll
+    .filter((v) => onChannel(v._id))
+    .map(channelPriced)
+    .sort((a, b) => a.sellingPricePaise - b.sellingPricePaise);
 
   const sellableIds = [...visible.filter((p) => !p.hasVariants).map((p) => p._id), ...variants.map((v) => v._id)];
   const [stockRows, sold] = await Promise.all([

@@ -284,6 +284,21 @@ export async function createOrder(input: OrderInput, user: SessionUser): Promise
   return maybeConfirm(String(doc._id), Boolean(input.confirm), user);
 }
 
+/**
+ * Order placed on the online store (no signed-in user): saved as a PENDING marketplace order,
+ * created "by" the store so it shows in Orders like any other.
+ */
+export async function createWebsiteOrder(input: OrderInput, by: string): Promise<{ _id: string; orderNo: string }> {
+  const fields = await buildOrder(input);
+  const doc = await OrderModel.create({
+    ...fields,
+    orderNo: await nextCode("order", "ORD", 5),
+    status: "PENDING",
+    history: [{ status: "PENDING", at: new Date(), by, note: "Order placed on the website" }],
+  });
+  return { _id: String(doc._id), orderNo: doc.orderNo };
+}
+
 export async function updateOrder(id: string, input: OrderInput, user: SessionUser): Promise<SaveOrderResult> {
   if (!isValidObjectId(id)) throw notFound("Order");
   const fields = await buildOrder(input);

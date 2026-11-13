@@ -4,7 +4,7 @@ import { Edit2, ListPlus, Power } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { Channel } from "@/lib/commerceTypes";
-import { AssignProductsModal } from "./AssignProductsModal";
+import { AssignProductsDrawer } from "./AssignProductsDrawer";
 import { ChannelFormModal } from "./ChannelFormModal";
 import { useToggleChannel } from "./ChannelListView";
 
@@ -26,7 +26,7 @@ export function ChannelDetailActions({ channel }: { channel: Channel }) {
         Assign Products
       </Button>
       <ChannelFormModal channel={editOpen ? channel : null} onClose={() => setEditOpen(false)} />
-      <AssignProductsModal channelId={channel._id} channelName={channel.name} open={assignOpen} onClose={() => setAssignOpen(false)} />
+      <AssignProductsDrawer channelId={channel._id} channelName={channel.name} open={assignOpen} onClose={() => setAssignOpen(false)} />
     </>
   );
 }
